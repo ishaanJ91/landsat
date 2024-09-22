@@ -3,6 +3,8 @@ import nasaLogo from "../images/nasa.png";
 import earth from "../images/earth.png";
 import maps from "../images/maps.webp";
 import srmaps from "../images/sr_map.png";
+import { Link } from "react-router-dom";
+import Header from "./Header";
 
 export default function HomePage() {
   const [expanded, setExpanded] = useState(false);
@@ -26,146 +28,6 @@ export default function HomePage() {
 
   return (
     <div className={`overflow-x-hidden min-h-screen bg-black text-gray-100`}>
-      <header
-        className={`py-8 md:py-10 fixed top-0 w-full z-30 transition-all duration-300 ${
-          scrolled
-            ? "bg-black shadow-lg border-b-2 border-gray-900"
-            : "bg-transparent"
-        }`}
-      >
-        <div className="max-w-5xl mx-auto px-10 flex justify-between items-center">
-          <div className="flex-shrink-0">
-            <a
-              href="#"
-              title="Landsat Tracker"
-              className="flex rounded outline-none focus:ring-1 focus:ring-gray-100 focus:ring-offset-2"
-            >
-              <h1 className="text-2xl font-bold text-gray-100 font-pj">
-                Landsat Tracker
-              </h1>
-            </a>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden lg:flex lg:space-x-10 items-center">
-            <a
-              href="#"
-              title="Home"
-              className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-            >
-              Home
-            </a>
-            <a
-              href="#"
-              title="About"
-              className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-            >
-              About
-            </a>
-            <a
-              href="#"
-              title="Data"
-              className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-            >
-              Data
-            </a>
-            <button
-              type="button"
-              className="text-base border-2 border-white py-1 px-4 rounded-lg font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-            >
-              Signup
-            </button>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden">
-            <button
-              type="button"
-              className="text-gray-100"
-              onClick={() => setExpanded(!expanded)}
-              aria-expanded={expanded}
-            >
-              {!expanded ? (
-                <svg
-                  className="w-7 h-7"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  className="w-7 h-7"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        {expanded && (
-          <nav className="lg:hidden">
-            <div className="px-1 py-8">
-              <div className="grid gap-y-7">
-                <a
-                  href="#"
-                  title="Home"
-                  className="flex items-center p-3 text-base font-medium text-gray-100 transition-all duration-200 rounded-xl hover:bg-gray-900"
-                >
-                  Home
-                </a>
-                <a
-                  href="#"
-                  title="About"
-                  className="flex items-center p-3 text-base font-medium text-gray-100 transition-all duration-200 rounded-xl hover:bg-gray-900"
-                >
-                  About
-                </a>
-                <a
-                  href="#"
-                  title="Data"
-                  className="flex items-center p-3 text-base font-medium text-gray-100 transition-all duration-200 rounded-xl hover:bg-gray-900"
-                >
-                  Data
-                </a>
-                <a
-                  href="#"
-                  title="Contact"
-                  className="flex items-center p-3 text-base font-medium text-gray-100 transition-all duration-200 rounded-xl hover:bg-gray-900"
-                >
-                  Contact
-                </a>
-                <a
-                  href="#"
-                  className="inline-flex items-center justify-center px-6 py-3 text-base font-bold leading-7 text-white transition-all duration-200 bg-gray-800 border border-transparent rounded-xl hover:bg-gray-700"
-                  role="button"
-                >
-                  Get Started
-                </a>
-              </div>
-            </div>
-          </nav>
-        )}
-      </header>
-
       <section className="mt-28 bg-black z-10 sm:pt-16 relative overflow-hidden">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="px-3 mx-auto text-left">
@@ -234,7 +96,7 @@ export default function HomePage() {
           <div className="flex flex-col justify-center">
             <div className="mt-6 flex flex-col">
               <div className="grid grid-cols-2 md:grid-cols-2 sm:grid-cols-1">
-                <div className="border-2 border-l-0 border-gray-600 pr-4 py-10">
+                <div className="flex flex-col lg:flex-col md:flex-col sm:flex-row gap-2 border-2 border-l-0 border-gray-900 pr-8 py-16">
                   <h3 className="text-2xl font-semibold text-white">
                     Real-Time Notifications
                   </h3>
@@ -245,7 +107,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <div className="pl-4 py-10 border-2 border-gray-600 border-l-0 border-r-0">
+                <div className="flex flex-col lg:flex-col md:flex-col sm:flex-row gap-2 pl-8 py-16 border-2 border-gray-900 border-l-0 border-r-0">
                   <h3 className="text-2xl font-semibold text-white">
                     Advanced Filtering Options
                   </h3>
@@ -258,7 +120,7 @@ export default function HomePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-1 sm:grid-cols-1 gap-4">
-                <div className="border-b-2 py-10 border-gray-600 pr-4">
+                <div className="border-b-2 py-10 border-gray-900 pr-4">
                   <div className="flex flex-row gap-4">
                     <h3 className="text-2xl font-semibold text-white">
                       Target Location Selection
