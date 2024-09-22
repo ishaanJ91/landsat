@@ -1,0 +1,52 @@
+// Load the Landsat 8 Surface Reflectance Image Collection
+var longitude = 30;
+var latitude = 1;
+var landsatSR = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+                  .filterDate('2022-01-01', '2023-08-31') // Broaden date range
+                  .filterBounds(ee.Geometry.Point([longitude, latitude])); // Focus on your area of interest
+
+// Check the number of images available
+print('Number of images:', landsatSR.size());
+
+// List available images to verify
+var imageList = landsatSR.toList(landsatSR.size());
+print('Image List:', imageList);
+
+// Get the first image from the collection
+var image = landsatSR.first();
+
+// Check if an image was returned
+if (image) {
+  // Convert DN values to Surface Reflectance using the scale factors
+  var surfaceReflectance = image.select(['SR_B4', 'SR_B5']) // Select Red (B4) and NIR (B5) bands
+                                 .multiply(0.0000275).add(-0.2);
+
+  // Calculate NDVI using the NIR (B5) and Red (B4) bands
+  var ndvi = surfaceReflectance.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI');
+
+  // Define a color palette for NDVI visualization
+  var ndviPalette = [
+    'brown',   // Low NDVI values (barren land, deserts)
+    'yellow',  // Transition zones (intermediate NDVI values)
+    'green'    // High NDVI values (vegetation, forests)
+  ];
+
+  // Add NDVI layer to the map with the custom color palette
+  // Each pixel's NDVI value will be mapped to a color in this palette
+  Map.addLayer(ndvi, {min: -1, max: 1, palette: ndviPalette}, 'NDVI Color-Coded');
+
+  // Center the map on the selected point
+  Map.centerObject(ee.Geometry.Point([longitude, latitude]), 8); 
+
+  // Extract NDVI value at the point
+  var ndviValue = ndvi.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: ee.Geometry.Point([longitude, latitude]),
+    scale: 30
+  });
+
+  // Print the NDVI value
+  print('NDVI at point:', ndviValue);
+} else {
+  print('No images found for the specified date range and location.');
+}
