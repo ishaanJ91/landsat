@@ -10,20 +10,24 @@ import { Route, Routes } from 'react-router-dom'
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './App.css';
+import { UserContextProvider } from './component/UserContext';
 
 axios.defaults.baseURL = 'http://localhost:3001';
+axios.defaults.withCredentials = true;
 
 function App() {
+    
     return (
-        <Routes>
-            <Route path={"/"} element={<Layout/>}>
+        <UserContextProvider>
+            <Routes>
             <Route index element={<HomePage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/target-location" element={<TargetLocation />} />
-            </Route>
+            <Route path="/dashboard/target-location" element={<TargetLocation />} />
+
         </Routes>
+        </UserContextProvider>
     );
 };
 

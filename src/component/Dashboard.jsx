@@ -1,31 +1,48 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useContext, useState, useEffect } from "react";
+import { UserContext } from "./UserContext";
+import Sidebar from "./Sidebar";
+import HeaderAccount from "./HeaderAccount";
+import { Navigate } from "react-router-dom";
 
 export default function Dashboard() {
-  const [username, setUsername] = useState("");
+  const { user } = useContext(UserContext);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    axios
-      .get("/profile", { withCredentials: true }) // Ensure backend is running on correct port
-      .then((response) => {
-        setUsername(response.data.name); // Set the username from the response
-      })
-      .catch((error) => {
-        console.error("Error fetching profile data:", error);
-      });
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   return (
-    <>
-      <div className="overflow-x-hidden min-h-screen bg-black text-gray-100 flex items-center justify-center">
-        <section className="top-0 bg-black z-30 relative">
-          <div className="max-w-md mx-auto flex flex-col items-center justify-center">
-            <h2 className="text-5xl font-semibold mb-8">
-              Welcome Back, {username}
-            </h2>
+    <div className="overflow-x-hidden min-h-screen bg-black text-gray-100">
+      <HeaderAccount scrolled={scrolled} />
+
+      <section className="mt-28 bg-black z-10 sm:pt-16 relative overflow-hidden">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <div className="px-3 mx-auto text-left">
+            <p className="mt-2 max-w-2xl text-5xl font-bold leading-tight text-gray-100 sm:leading-tight sm:text-5xl lg:text-6xl lg:leading-tight font-pj">
+              Welcome <br />
+              <span className="relative inline-flex sm:inline">
+                <span className="bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] blur-lg filter opacity-30 w-full h-full absolute inset-0"></span>
+                <span className="relative"> {user?.name} </span>
+              </span>
+            </p>
+
+            <div className="sm:items-center sm:justify-left sm:px-0 sm:space-x-5 sm:flex mt-8"></div>
           </div>
-        </section>
-      </div>
-    </>
+        </div>
+      </section>
+    </div>
   );
 }
