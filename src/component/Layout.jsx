@@ -5,7 +5,12 @@ export default function Layout() {
   const location = useLocation();
 
   // Paths where you don't want to show the Header
-  const hideHeaderOnPaths = ["/register", "/login", "/target-location"];
+  const hideHeaderOnPaths = [
+    "/register",
+    "/login",
+    "/target-location",
+    "/dashboard",
+  ];
 
   return (
     <div className="">

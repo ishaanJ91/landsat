@@ -1,39 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import logo from "../images/logo.png";
+import { Link, Navigate } from "react-router-dom";
+import { useContext, useState } from "react";
 import axios from "axios";
+import logo from "../images/logo.png";
+import { UserContext } from "./UserContext.jsx";
 import { useNavigate } from "react-router-dom";
 
-export default function Login() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [redirect, setRedirect] = useState(false); // For redirection
+  const { setUser } = useContext(UserContext); // Access setUser from UserContext
   const navigate = useNavigate();
 
-  function handleLoginSubmit(ev) {
+  async function handleLoginSubmit(ev) {
     ev.preventDefault();
-    axios
-      .post("http://localhost:3000/login", {
-        email,
-        password,
-      })
-      .then((response) => {
-        // If login is successful
-        alert(`Login successful`);
-        setEmail("");
-        setPassword("");
+    try {
+      const { data } = await axios.post("/login", { email, password });
+      setUser(data);
+      alert("Login successful");
+      setRedirect(true);
+    } catch (e) {
+      alert("Login failed");
+    }
+  }
 
-        navigate("/dashboard");
-      })
-      .catch((error) => {
-        // If login fails (e.g., wrong password or user not found)
-        if (error.response && error.response.status === 422) {
-          alert("Invalid password. Please try again.");
-        } else if (error.response && error.response.status === 404) {
-          alert("User not found. Please check your email.");
-        } else {
-          alert("An error occurred. Please try again later.");
-        }
-      });
+  if (redirect) {
+    return <Navigate to="/dashboard" />; // Redirect to dashboard after login
   }
 
   return (

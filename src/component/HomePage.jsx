@@ -28,6 +28,11 @@ export default function HomePage() {
 
   return (
     <div className={`overflow-x-hidden min-h-screen bg-black text-gray-100`}>
+      <Header
+        scrolled={scrolled}
+        expanded={expanded}
+        setExpanded={setExpanded}
+      />
       <section className="mt-28 bg-black z-10 sm:pt-16 relative overflow-hidden">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="px-3 mx-auto text-left">
