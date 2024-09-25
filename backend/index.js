@@ -1,103 +1,214 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
-const User = require('./models/user'); 
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const User = require("./models/user");
+const ee = require("@google/earthengine"); // Import Google Earth Engine
 
-require('dotenv').config();
+require("dotenv").config();
 
 const app = express();
-
 const bcryptSalt = bcrypt.genSaltSync(10);
-const jwtSecret = 'mysecretkey';  
+const jwtSecret = "mysecretkey";
+
+// Load Earth Engine private key
+const privateKey = require("/Users/nishitjain/Desktop/codimg/landsat/Optimistic Tube 436600.json");
+
+// Authenticate Earth Engine using the service account
+ee.data.authenticateViaPrivateKey(privateKey, () => {
+  ee.initialize(null, null, () => {
+    console.log("Google Earth Engine client initialized.");
+  });
+});
 
 // Middlewares
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect(process.env.MONGO_URL);     
+mongoose.connect(process.env.MONGO_URL);
 
-app.use(cors({
+app.use(
+  cors({
     credentials: true,
-    origin: 'http://localhost:3000',  
-}));
+    origin: "http://localhost:3000",
+  })
+);
 
-  app.get('/test', (req, res) => {
-    res.json('test ok');
-});
-
-app.post('/register', async (req, res) => {
-    const{ name, email, password } = req.body;
-    try {
-        const userDoc = await User.create({ 
-            name, 
-            email, 
-            password: bcrypt.hashSync(password, bcryptSalt) 
-        });
-        res.json(userDoc);
-    } catch (e) {
-        res.status(422).json(e);
+async function findOrCreateUser(email, name) {
+  try {
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({ name, email, password: "" });
+      await user.save();
     }
+    return user;
+  } catch (error) {
+    console.error("Error in findOrCreateUser:", error);
+    throw error;
+  }
+}
+
+// Authentication routes
+app.post("/register", async (req, res) => {
+  const { name, email, password } = req.body;
+  try {
+    const userDoc = await User.create({
+      name,
+      email,
+      password: bcrypt.hashSync(password, bcryptSalt),
+    });
+    res.json(userDoc);
+  } catch (e) {
+    res.status(422).json(e);
+  }
 });
 
-app.post('/login', async (req, res) => {
-    const { email, password } = req.body;
-    const userDoc = await User.findOne({ email });
-
-    if (userDoc) {
-        const passOk = bcrypt.compareSync(password, userDoc.password);
-        if (passOk) {
-            jwt.sign({ email: userDoc.email, id: userDoc._id }, jwtSecret, {}, (err, token) => {
-                if (err) throw err;
-                console.log("Generated Token:", token); // Log the generated token
-                res.cookie('token', token, {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict',
-                }).json(userDoc);
-            });
-        } else {
-            res.status(422).json('pass not ok');
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+  const userDoc = await User.findOne({ email });
+  if (userDoc) {
+    const passOk = bcrypt.compareSync(password, userDoc.password);
+    if (passOk) {
+      jwt.sign(
+        { email: userDoc.email, id: userDoc._id },
+        jwtSecret,
+        {},
+        (err, token) => {
+          if (err) throw err;
+          res
+            .cookie("token", token, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "strict",
+            })
+            .json(userDoc);
         }
+      );
     } else {
-        res.json('not found');
+      res.status(422).json("Password is incorrect");
     }
+  } else {
+    res.json("User not found");
+  }
 });
 
+app.post("/login-google", async (req, res) => {
+  const { email, name } = req.body;
+  try {
+    const user = await findOrCreateUser(email, name);
+    jwt.sign(
+      { email: user.email, id: user._id },
+      jwtSecret,
+      {},
+      (err, token) => {
+        if (err) throw err;
+        res
+          .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+          })
+          .json(user);
+      }
+    );
+  } catch (error) {
+    console.error("Error in /login-google:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
-
-app.get('/profile', (req, res) => {
-    const { token } = req.cookies;
-    console.log("Cookies:", req.cookies); // Log cookies to check if token is there
-
-    if (!token) {
-        return res.status(401).json('no token'); // Immediately return if there's no token
+app.get("/profile", (req, res) => {
+  const { token } = req.cookies;
+  if (!token) {
+    return res.status(401).json("No token found");
+  }
+  jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+    if (err) {
+      return res.status(401).json("Invalid token");
     }
+    const user = await User.findById(userData.id);
+    if (!user) {
+      return res.status(404).json("User not found");
+    }
+    const { name, email, _id } = user;
+    res.json({ name, email, _id });
+  });
+});
 
-    if (token) {
-        jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-            if (err) {
-                return res.status(401).json('invalid token');
-            }
-            const user = await User.findById(userData.id);
+// Earth Engine route to fetch NDVI data and tile URL
+app.get("/earth-engine-data", (req, res) => {
+  const { longitude, latitude } = req.query;
 
-            if (!user) {
-                return res.status(404).json('User not found');
-            }
-            const { name, email, _id } = user;
-            res.json({ name, email, _id });
+  if (!longitude || !latitude) {
+    return res.status(400).json({ error: "Missing latitude or longitude" });
+  }
+
+  try {
+    // Load Landsat 8 Surface Reflectance Image Collection
+    const landsatSR = ee
+      .ImageCollection("LANDSAT/LC08/C02/T1_L2")
+      .filterDate("2022-01-01", "2023-08-31")
+      .filterBounds(
+        ee.Geometry.Point([parseFloat(longitude), parseFloat(latitude)])
+      );
+
+    // Get the first image from the collection
+    landsatSR.size().evaluate((size) => {
+      if (size > 0) {
+        const image = landsatSR.first();
+        const surfaceReflectance = image
+          .select(["SR_B4", "SR_B5"])
+          .multiply(0.0000275)
+          .add(-0.2);
+
+        const ndvi = surfaceReflectance
+          .normalizedDifference(["SR_B5", "SR_B4"])
+          .rename("NDVI");
+
+        // Get the NDVI Map ID and token
+        ndvi.getMap(
+          { min: -1, max: 1, palette: ["brown", "yellow", "green"] },
+          function (map) {
+            const tileUrl = map.urlFormat; // Extract the tile URL
+
+            // Calculate NDVI value at the point
+            const ndviValue = ndvi.reduceRegion({
+              reducer: ee.Reducer.mean(),
+              geometry: ee.Geometry.Point([
+                parseFloat(longitude),
+                parseFloat(latitude),
+              ]),
+              scale: 30,
+            });
+
+            ndviValue.evaluate((result) => {
+              res.json({
+                ndvi: result.NDVI || "No NDVI data",
+                tileUrl: tileUrl, // This contains the correct mapid and placeholders
+              });
+            });
+          }
+        );
+      } else {
+        res.json({
+          error: "No images found for the specified date range and location.",
         });
-    } else {
-        res.status(401).json('no token');
-    }
+      }
+    });
+  } catch (error) {
+    console.error("Error retrieving Earth Engine data:", error);
+    res.status(500).json({ error: "Failed to retrieve Earth Engine data" });
+  }
 });
 
-app.post('/logout', (req, res) => {
-    res.cookie('token', '').json(true);
+// Logout
+app.post("/logout", (req, res) => {
+  res.cookie("token", "").json(true);
 });
 
-
-
-app.listen(3001);
+// Start the server
+app.listen(3001, () => {
+  console.log("Server running on port 3001");
+});
