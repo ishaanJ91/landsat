@@ -50,7 +50,7 @@ export default function Register() {
     /* global google */
     google.accounts.id.initialize({
       client_id:
-        "203967010560-iu0inlat9l23ac4dggkbnsob8ghl9pr6.apps.googleusercontent.com",
+        "981598769871-qi14dkp4jd9bcrqrp7u8jaknpf0tbp6f.apps.googleusercontent.com",
       callback: handleGoogleRegisterSuccess,
     });
     google.accounts.id.renderButton(document.getElementById("google-signin"), {
