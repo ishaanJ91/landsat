@@ -1,6 +1,6 @@
 // Load the Landsat 8 Surface Reflectance Image Collection
-var longitude = 25;
-var latitude = 20;
+var longitude = 40;
+var latitude = 2;
 var landsatSR = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
                   .filterDate('2024-09-1', '2024-09-25') // Broaden date range
                   .filterBounds(ee.Geometry.Point([longitude, latitude])); // Focus on your area of interest
@@ -49,18 +49,21 @@ if (image) {
   // Combine both flags for the final cloud mask
   var cloudMask = cloudConfidenceHigh.or(cloudFlag);
 
-  // Calculate the cloud coverage percentage within the area of interest
+  // Create a 90m x 90m region (3x3 pixels, each 30m) centered on the point of interest
+  var gridRegion = ee.Geometry.Point([longitude, latitude]).buffer(45); // Buffer by 45m to get 90m x 90m
+
+  // Calculate the cloud coverage percentage within the 3x3 grid area
   var cloudCoverage = cloudMask.reduceRegion({
     reducer: ee.Reducer.sum(),
-    geometry: ee.Geometry.Point([longitude, latitude]).buffer(10000), // 10 km buffer around the point
+    geometry: gridRegion,
     scale: 30,
     maxPixels: 1e9
   }).get('QA_PIXEL'); // Get the number of cloud pixels
 
-  // Get the total number of pixels in the same region
+  // Get the total number of pixels in the 3x3 grid
   var totalPixels = ee.Number(image.select('QA_PIXEL').reduceRegion({
     reducer: ee.Reducer.count(),
-    geometry: ee.Geometry.Point([longitude, latitude]).buffer(10000), // 10 km buffer around the point
+    geometry: gridRegion,
     scale: 30,
     maxPixels: 1e9
   }).get('QA_PIXEL'));
@@ -69,20 +72,23 @@ if (image) {
   var cloudCoveragePercentage = ee.Number(cloudCoverage).divide(totalPixels).multiply(100);
 
   // Print the cloud coverage percentage
-  print('Cloud Coverage Percentage:', cloudCoveragePercentage);
+  print('Cloud Coverage Percentage (3x3 grid):', cloudCoveragePercentage);
 
-  // Center the map on the selected point
-  Map.centerObject(ee.Geometry.Point([longitude, latitude]), 8); 
-
-  // Extract NDVI value at the point
+  // Extract the mean NDVI value for the 3x3 grid
   var ndviValue = ndvi.reduceRegion({
     reducer: ee.Reducer.mean(),
-    geometry: ee.Geometry.Point([longitude, latitude]),
+    geometry: gridRegion,
     scale: 30
   });
 
-  // Print the NDVI value
-  print('NDVI at point:', ndviValue);
+  // Print the average NDVI value for the 3x3 grid
+  print('Average NDVI for 3x3 grid:', ndviValue);
+
+  // Center the map on the selected point
+  Map.centerObject(ee.Geometry.Point([longitude, latitude]), 8);
+  
+  // Display the 3x3 grid on the map for visualization
+  Map.addLayer(gridRegion, {}, '3x3 Grid Region');
 } else {
   print('No images found for the specified date range and location.');
 }
