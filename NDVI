@@ -1,8 +1,8 @@
 // Load the Landsat 8 Surface Reflectance Image Collection
-var longitude = 30;
-var latitude = 1;
+var longitude = 25;
+var latitude = 20;
 var landsatSR = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
-                  .filterDate('2022-01-01', '2023-08-31') // Broaden date range
+                  .filterDate('2024-09-1', '2024-09-25') // Broaden date range
                   .filterBounds(ee.Geometry.Point([longitude, latitude])); // Focus on your area of interest
 
 // Check the number of images available
@@ -24,16 +24,52 @@ if (image) {
   // Calculate NDVI using the NIR (B5) and Red (B4) bands
   var ndvi = surfaceReflectance.normalizedDifference(['SR_B5', 'SR_B4']).rename('NDVI');
 
-  // Define a color palette for NDVI visualization
-  var ndviPalette = [
-    'brown',   // Low NDVI values (barren land, deserts)
-    'yellow',  // Transition zones (intermediate NDVI values)
-    'green'    // High NDVI values (vegetation, forests)
-  ];
+  // Define visualization parameters for different NDVI ranges
+  var ndviLowPalette = ['#D2B48C']; // Light brown for NDVI values below 0.2
+  var ndviMidPalette = ['yellow'];  // Yellow for NDVI values between 0.2 and 0.5
+  var ndviHighPalette = ['green'];  // Green for NDVI values above 0.5
 
-  // Add NDVI layer to the map with the custom color palette
-  // Each pixel's NDVI value will be mapped to a color in this palette
-  Map.addLayer(ndvi, {min: -1, max: 1, palette: ndviPalette}, 'NDVI Color-Coded');
+  // Create masks for different NDVI ranges
+  var ndviLow = ndvi.updateMask(ndvi.lt(0.2));
+  var ndviMid = ndvi.updateMask(ndvi.gte(0.2).and(ndvi.lt(0.5)));
+  var ndviHigh = ndvi.updateMask(ndvi.gte(0.5));
+
+  // Add NDVI layers to the map with their respective palettes
+  Map.addLayer(ndviLow, {min: -1, max: 0.2, palette: ndviLowPalette}, 'NDVI < 0.2 (Brown)');
+  Map.addLayer(ndviMid, {min: 0.2, max: 0.5, palette: ndviMidPalette}, '0.2 ≤ NDVI < 0.5 (Yellow)');
+  Map.addLayer(ndviHigh, {min: 0.5, max: 1, palette: ndviHighPalette}, 'NDVI ≥ 0.5 (Green)');
+
+  // Extract cloud information from the QA_PIXEL band
+  var qaPixel = image.select('QA_PIXEL');
+
+  // Extract cloud confidence bits and cloud bit
+  var cloudConfidenceHigh = qaPixel.bitwiseAnd(1 << 4).neq(0); // High confidence in cloud
+  var cloudFlag = qaPixel.bitwiseAnd(1 << 5).neq(0); // Cloud flag set
+
+  // Combine both flags for the final cloud mask
+  var cloudMask = cloudConfidenceHigh.or(cloudFlag);
+
+  // Calculate the cloud coverage percentage within the area of interest
+  var cloudCoverage = cloudMask.reduceRegion({
+    reducer: ee.Reducer.sum(),
+    geometry: ee.Geometry.Point([longitude, latitude]).buffer(10000), // 10 km buffer around the point
+    scale: 30,
+    maxPixels: 1e9
+  }).get('QA_PIXEL'); // Get the number of cloud pixels
+
+  // Get the total number of pixels in the same region
+  var totalPixels = ee.Number(image.select('QA_PIXEL').reduceRegion({
+    reducer: ee.Reducer.count(),
+    geometry: ee.Geometry.Point([longitude, latitude]).buffer(10000), // 10 km buffer around the point
+    scale: 30,
+    maxPixels: 1e9
+  }).get('QA_PIXEL'));
+
+  // Calculate the cloud coverage percentage
+  var cloudCoveragePercentage = ee.Number(cloudCoverage).divide(totalPixels).multiply(100);
+
+  // Print the cloud coverage percentage
+  print('Cloud Coverage Percentage:', cloudCoveragePercentage);
 
   // Center the map on the selected point
   Map.centerObject(ee.Geometry.Point([longitude, latitude]), 8); 
