@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const User = require("./models/user");
 const ee = require("@google/earthengine"); // Import Google Earth Engine
 
 require("dotenv").config();
@@ -27,20 +26,34 @@ ee.data.authenticateViaPrivateKey(privateKey, () => {
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect(process.env.MONGO_URL);
+mongoose.connect(process.env.MONGO_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:3000",
+    origin: "http://localhost:3000", // Allow requests from your frontend
   })
 );
 
+// Modified User schema to handle optional password for Google OAuth user
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: false, default: null }, // Password is optional
+});
+
+const User = mongoose.model("User", userSchema); // Ensure the model uses the updated schema
+
+// Function to find or create a user
 async function findOrCreateUser(email, name) {
   try {
     let user = await User.findOne({ email });
     if (!user) {
-      user = new User({ name, email, password: "" });
+      // Create user without password for Google OAuth users
+      user = new User({ name, email, password: null });
       await user.save();
     }
     return user;
@@ -62,6 +75,37 @@ app.post("/register", async (req, res) => {
     res.json(userDoc);
   } catch (e) {
     res.status(422).json(e);
+  }
+});
+
+app.post("/register-google", async (req, res) => {
+  const { email, name } = req.body;
+
+  try {
+    // Use the findOrCreateUser function to either find or create the user
+    const user = await findOrCreateUser(email, name);
+
+    // Generate a JWT token for the user
+    jwt.sign(
+      { email: user.email, id: user._id },
+      jwtSecret,
+      {},
+      (err, token) => {
+        if (err) throw err;
+
+        // Send the JWT token as a cookie and user data as a response
+        res
+          .cookie("token", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // secure in production
+            sameSite: "strict",
+          })
+          .json(user);
+      }
+    );
+  } catch (error) {
+    console.error("Error in /register-google:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
