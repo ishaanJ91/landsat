@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import logo from "../images/logo.png";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode"; // Use jwt-decode to decode the token
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -12,20 +12,52 @@ export default function Register() {
 
   function handleRegisterSubmit(ev) {
     ev.preventDefault();
-    axios.post("/register", {
-      name,
-      email,
-      password,
-    });
-
-    alert(`Registration successful for ${name}`);
-
-    setName("");
-    setEmail("");
-    setPassword("");
-
-    navigate("/dashboard");
+    axios
+      .post("/register", {
+        name,
+        email,
+        password,
+      })
+      .then(() => {
+        alert(`Registration successful for ${name}`);
+        setName("");
+        setEmail("");
+        setPassword("");
+        navigate("/dashboard");
+      })
+      .catch((error) => {
+        console.error("Error during registration:", error);
+        alert("Registration failed");
+      });
   }
+
+  // Google OAuth registration success handler
+  const handleGoogleRegisterSuccess = async (response) => {
+    const decoded = jwtDecode(response.credential); // Decode the credential to extract information
+    const { email, name } = decoded;
+
+    try {
+      await axios.post("/register-google", { email, name });
+      alert(`Google registration successful for ${name}`);
+      navigate("/dashboard");
+    } catch (e) {
+      console.error("Google register error:", e);
+      alert("Google registration failed");
+    }
+  };
+
+  useEffect(() => {
+    /* global google */
+    google.accounts.id.initialize({
+      client_id:
+        "203967010560-iu0inlat9l23ac4dggkbnsob8ghl9pr6.apps.googleusercontent.com",
+      callback: handleGoogleRegisterSuccess,
+    });
+    google.accounts.id.renderButton(document.getElementById("google-signin"), {
+      theme: "outline",
+      size: "large",
+    });
+  }, []);
 
   return (
     <div className="overflow-x-hidden min-h-screen bg-black text-gray-100 flex items-center justify-center">
@@ -75,13 +107,7 @@ export default function Register() {
 
             <div className="my-2 w-full border-t border-gray-700"></div>
 
-            <button
-              type="button"
-              className="w-full py-3 bg-white text-black font-semibold rounded"
-              onClick={() => alert("Google OAuth not implemented yet")}
-            >
-              Continue with Google
-            </button>
+            <div id="google-signin" className="w-full py-3 bg-white"></div>
           </form>
 
           <p className="text-gray-500 text-sm mt-6">
