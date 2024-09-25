@@ -96,7 +96,7 @@ function MyMap() {
 
   return (
     <div className="map-container" style={{ position: "relative" }}>
-      <LoadScript googleMapsApiKey="AIzaSyA93uKKAAe3IUGjHHe_yhW9vnHQQgzKCMA">
+      <LoadScript googleMapsApiKey="AIzaSyBKAplgzV0XUC91sA9mAW4Bg3PWWh9GGDY">
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={defaultCenter}

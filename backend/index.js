@@ -13,7 +13,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
 // Load Earth Engine private key
-const privateKey = require("/Users/nishitjain/Desktop/codimg/landsat/Optimistic Tube 436600.json");
+const privateKey = require("/Users/nishitjain/Desktop/codimg/landsat/boxwood-scope-436601-g3-602d42046b96.json");
 
 // Authenticate Earth Engine using the service account
 ee.data.authenticateViaPrivateKey(privateKey, () => {
