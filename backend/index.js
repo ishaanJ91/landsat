@@ -5,6 +5,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const ee = require("@google/earthengine"); // Import Google Earth Engine
+const axios = require("axios"); // Import Axios for overpass prediction
 
 require("dotenv").config();
 
@@ -190,15 +191,15 @@ app.get("/earth-engine-data", (req, res) => {
   }
 
   try {
-    // Load Landsat 8 Surface Reflectance Image Collection
+    // Load the latest available Landsat 8 Surface Reflectance Image Collection
     const landsatSR = ee
       .ImageCollection("LANDSAT/LC08/C02/T1_L2")
-      .filterDate("2022-01-01", "2023-08-31")
       .filterBounds(
         ee.Geometry.Point([parseFloat(longitude), parseFloat(latitude)])
-      );
+      )
+      .sort("system:time_start", false); // Sort by date, latest first
 
-    // Get the first image from the collection
+    // Get the first (most recent) image from the collection
     landsatSR.size().evaluate((size) => {
       if (size > 0) {
         const image = landsatSR.first();
@@ -211,33 +212,87 @@ app.get("/earth-engine-data", (req, res) => {
           .normalizedDifference(["SR_B5", "SR_B4"])
           .rename("NDVI");
 
-        // Get the NDVI Map ID and token
+        // Define a 90m x 90m region (3x3 pixels) around the point of interest
+        const gridRegion = ee.Geometry.Point([
+          parseFloat(longitude),
+          parseFloat(latitude),
+        ]).buffer(45);
+
+        // Cloud detection using QA_PIXEL band
+        const qaPixel = image.select("QA_PIXEL");
+
+        // Bits for cloud confidence (bit 4) and cloud (bit 5)
+        const cloudConfidence = qaPixel.bitwiseAnd(1 << 4).neq(0); // High confidence in cloud
+        const cloudFlag = qaPixel.bitwiseAnd(1 << 5).neq(0); // Cloud presence bit
+
+        // Combine both flags for the final cloud mask
+        const cloudMask = cloudConfidence.or(cloudFlag);
+
+        // Total pixels in the 3x3 grid
+        const totalPixels = ee.Number(
+          qaPixel
+            .reduceRegion({
+              reducer: ee.Reducer.count(),
+              geometry: gridRegion,
+              scale: 30,
+              maxPixels: 1e9,
+            })
+            .get("QA_PIXEL")
+        );
+
+        // Cloud-covered pixels in the 3x3 grid
+        const cloudPixels = ee.Number(
+          cloudMask
+            .reduceRegion({
+              reducer: ee.Reducer.sum(),
+              geometry: gridRegion,
+              scale: 30,
+              maxPixels: 1e9,
+            })
+            .get("QA_PIXEL")
+        );
+
+        // Cloud coverage percentage (ensure it stays between 0-100)
+        const cloudCoveragePercentage = cloudPixels
+          .divide(totalPixels)
+          .multiply(100)
+          .min(100)
+          .max(0);
+
+        // Calculate the mean NDVI value for the 90m x 90m grid
+        const ndviValue = ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(),
+          geometry: gridRegion,
+          scale: 30,
+        });
+
+        // Convert NDVI Map to a tile URL for visualization
         ndvi.getMap(
           { min: -1, max: 1, palette: ["brown", "yellow", "green"] },
           function (map) {
-            const tileUrl = map.urlFormat; // Extract the tile URL
+            const tileUrl = map.urlFormat; // Extract the NDVI tile URL for visualization
 
-            // Calculate NDVI value at the point
-            const ndviValue = ndvi.reduceRegion({
-              reducer: ee.Reducer.mean(),
-              geometry: ee.Geometry.Point([
-                parseFloat(longitude),
-                parseFloat(latitude),
-              ]),
-              scale: 30,
-            });
+            // Evaluate the cloud coverage percentage and NDVI value
+            cloudCoveragePercentage.evaluate((cloudCovPerc) => {
+              ndviValue.evaluate((ndviVal) => {
+                console.log("Cloud Coverage Percentage:", cloudCovPerc);
+                console.log("NDVI Value:", ndviVal);
 
-            ndviValue.evaluate((result) => {
-              res.json({
-                ndvi: result.NDVI || "No NDVI data",
-                tileUrl: tileUrl, // This contains the correct mapid and placeholders
+                res.json({
+                  ndvi: ndviVal.NDVI || "No NDVI data", // NDVI value
+                  cloudCoverage:
+                    cloudCovPerc !== null && !isNaN(cloudCovPerc)
+                      ? `${cloudCovPerc.toFixed(2)}%` // Return valid cloud coverage percentage
+                      : "No cloud data", // Handle invalid cloud data
+                  tileUrl: tileUrl, // URL to visualize NDVI as a tile
+                });
               });
             });
           }
         );
       } else {
         res.json({
-          error: "No images found for the specified date range and location.",
+          error: "No images found for the specified location.",
         });
       }
     });
@@ -245,6 +300,126 @@ app.get("/earth-engine-data", (req, res) => {
     console.error("Error retrieving Earth Engine data:", error);
     res.status(500).json({ error: "Failed to retrieve Earth Engine data" });
   }
+});
+
+// Overpass Prediction
+const fetchOverpassPrediction = async (year, month, day, path, row) => {
+  try {
+    const correctedMonth = month.substring(0, 3); // Correcting the month to 3 letters
+    const url = `https://landsat.usgs.gov/landsat/all_in_one_pending_acquisition/L9/Pend_Acq/y${year}/${correctedMonth}/${correctedMonth}-${day}-${year}.txt`;
+
+    console.log("Constructed Landsat acquisition URL:", url);
+    const response = await axios.get(url);
+
+    if (response.status === 200) {
+      console.log("Successfully retrieved data from Landsat URL");
+
+      const content = response.data.split("\n");
+      console.log("Content retrieved:", content.slice(0, 10)); // Log first 10 lines for brevity
+
+      const separator = "----------------------";
+      const separatorIndices = content
+        .map((line, index) => (line.includes(separator) ? index : -1))
+        .filter((index) => index !== -1);
+
+      if (separatorIndices.length >= 2) {
+        const dataLines = content.slice(separatorIndices[1] + 1);
+        console.log(
+          "Data lines after second separator:",
+          dataLines.slice(0, 10)
+        ); // Log first 10 data lines for brevity
+
+        // Parse the data and compare path and row
+        const filteredData = dataLines
+          .map((line) => line.trim().split(/\s+/))
+          .filter((lineData) => lineData[0] === path && lineData[1] === row);
+
+        console.log("Filtered Data for Path and Row:", filteredData);
+
+        if (filteredData.length > 0) {
+          // Assuming we have the Julian date in the third column
+          const julianDate = filteredData[0][2]; // E.g., "272-01:24:05"
+          console.log("Matching Julian Date found:", julianDate);
+
+          // Convert Julian date to Gregorian
+          const gregorianDate = julianToGregorian(julianDate);
+          console.log("Converted Gregorian Date:", gregorianDate);
+
+          return {
+            status: "success",
+            message: `Overpass found for Path: ${path}, Row: ${row}, Julian Date: ${julianDate}`,
+            gregorianDate, // Include the converted Gregorian date in the response
+          };
+        } else {
+          return {
+            status: "error",
+            message: `No overpass found for Path: ${path}, Row: ${row}`,
+          };
+        }
+      } else {
+        return {
+          status: "error",
+          message: "Data format error: Missing separator lines",
+        };
+      }
+    } else {
+      return {
+        status: "error",
+        message: `Failed to retrieve data. Status code: ${response.status}`,
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching overpass prediction:", error);
+    return {
+      status: "error",
+      message: "Error fetching overpass prediction",
+    };
+  }
+};
+
+// Julian to Gregorian conversion function
+// Function to convert Julian Date to Gregorian Date
+function julianToGregorian(julianDate) {
+  // Split the Julian date into day and time components
+  const [julianDay, time] = julianDate.split("-");
+
+  // Check if the day part is a valid number
+  const dayOfYear = parseInt(julianDay, 10);
+
+  if (isNaN(dayOfYear)) {
+    throw new Error("Invalid Julian day format");
+  }
+
+  // Create a new Date object with the given year and day of the year
+  const year = new Date().getFullYear(); // Assume the current year for simplicity
+  const gregorianDate = new Date(year, 0); // Start at the beginning of the year (January 1st)
+  gregorianDate.setDate(dayOfYear); // Set the day of the year
+
+  // If there's a time component, append it to the date
+  let isoString = gregorianDate.toISOString().split("T")[0]; // Get YYYY-MM-DD format
+  if (time) {
+    isoString += ` ${time}`; // Append the time
+  }
+
+  return isoString;
+}
+
+// Overpass Prediction API endpoint
+app.get("/landsat-overpass", async (req, res) => {
+  const { year, month, day, path, row } = req.query;
+
+  if (!year || !month || !day || !path || !row) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const predictionResult = await fetchOverpassPrediction(
+    year,
+    month,
+    day,
+    path,
+    row
+  );
+  res.json(predictionResult);
 });
 
 // Logout

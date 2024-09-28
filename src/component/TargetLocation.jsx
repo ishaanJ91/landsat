@@ -1,11 +1,16 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   GoogleMap,
-  LoadScript,
+  LoadScriptNext,
   Marker,
   GroundOverlay,
+  Autocomplete,
 } from "@react-google-maps/api";
 import axios from "axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
+const libraries = ["places"];
 
 const containerStyle = {
   width: "100vw",
@@ -14,7 +19,7 @@ const containerStyle = {
 
 const defaultCenter = {
   lat: 37.7749,
-  lng: -122.4194, // Default to San Francisco
+  lng: -122.4194,
 };
 
 function latLngToTileCoords(lat, lng, zoom) {
@@ -31,13 +36,25 @@ function MyMap() {
   const [marker, setMarker] = useState(null);
   const [inputLat, setInputLat] = useState("");
   const [inputLng, setInputLng] = useState("");
-  const [ndviData, setNdviData] = useState(null); // Store NDVI data
-  const [tileUrl, setTileUrl] = useState(null); // Store NDVI tile URL
+  const [ndviData, setNdviData] = useState(null);
+  const [tileUrl, setTileUrl] = useState(null);
+  const [path, setPath] = useState("");
+  const [row, setRow] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [overpassData, setOverpassData] = useState(null);
   const mapRef = useRef(null);
-  const [zoomLevel, setZoomLevel] = useState(10); // Store current zoom level
-  const [overlayKey, setOverlayKey] = useState(Date.now()); // Key for re-rendering overlay
+  const [zoomLevel, setZoomLevel] = useState(10);
+  const [overlayKey, setOverlayKey] = useState(Date.now());
+  const [autocomplete, setAutocomplete] = useState(null);
 
-  // Fetch NDVI data and tile URL from the backend based on the selected location
+  const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
   const fetchNDVIData = async (lat, lng) => {
     try {
       const response = await axios.get(
@@ -46,83 +63,186 @@ function MyMap() {
           params: { latitude: lat, longitude: lng },
         }
       );
-      console.log("NDVI data:", response.data);
-      setNdviData(response.data.ndvi); // Set NDVI data
-      setTileUrl(response.data.tileUrl); // Set NDVI tile URL
-      setOverlayKey(Date.now()); // Update key to force re-rendering of GroundOverlay
+      setNdviData(response.data.ndvi);
+      setTileUrl(response.data.tileUrl);
+      setOverlayKey(Date.now());
     } catch (error) {
       console.error("Error fetching NDVI data:", error);
     }
   };
 
+  const fetchOverpassData = async () => {
+    try {
+      const selectedDateObj = new Date(selectedDate);
+      const year = selectedDateObj.getFullYear();
+      const month = selectedDateObj.toLocaleString("default", {
+        month: "short",
+      });
+      const day = selectedDateObj.getDate();
+      const url = `http://localhost:3001/landsat-overpass?year=${year}&month=${month}&day=${day}&path=${path}&row=${row}`;
+      const response = await axios.get(url);
+      setOverpassData(response.data);
+    } catch (error) {
+      console.error("Error fetching overpass data:", error);
+    }
+  };
+
+  const handleZoomChange = useCallback(
+    debounce(() => {
+      if (mapRef.current) {
+        setZoomLevel(mapRef.current.getZoom());
+      }
+    }, 300),
+    []
+  );
+
   const handleMapClick = (event) => {
     const lat = event.latLng.lat();
     const lng = event.latLng.lng();
-
-    const newMarker = {
-      lat: lat,
-      lng: lng,
-    };
-
-    setMarker(newMarker); // Place the marker
+    const newMarker = { lat, lng };
+    setMarker(newMarker);
     setInputLat(lat.toFixed(6));
     setInputLng(lng.toFixed(6));
-
-    mapRef.current.panTo(newMarker); // Center map on the new marker
-
-    // Fetch NDVI data for the selected location
+    mapRef.current.panTo(newMarker);
     fetchNDVIData(lat, lng);
   };
 
   const handleInputChange = () => {
     const lat = parseFloat(inputLat);
     const lng = parseFloat(inputLng);
-
     if (!isNaN(lat) && !isNaN(lng)) {
       const newMarker = { lat, lng };
       setMarker(newMarker);
       mapRef.current.panTo(newMarker);
-
-      // Fetch NDVI data for the input location
       fetchNDVIData(lat, lng);
     }
   };
 
-  const handleZoomChange = () => {
-    if (mapRef.current) {
-      setZoomLevel(mapRef.current.getZoom());
+  const handlePlaceSelect = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace();
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      setMarker({ lat, lng });
+      setInputLat(lat.toFixed(6));
+      setInputLng(lng.toFixed(6));
+      mapRef.current.panTo({ lat, lng });
+      fetchNDVIData(lat, lng);
     }
+  };
+
+  const onLoadAutocomplete = (autocompleteInstance) => {
+    setAutocomplete(autocompleteInstance);
   };
 
   return (
     <div className="map-container" style={{ position: "relative" }}>
-      <LoadScript googleMapsApiKey="AIzaSyBKAplgzV0XUC91sA9mAW4Bg3PWWh9GGDY">
+      <LoadScriptNext
+        googleMapsApiKey="AIzaSyBKAplgzV0XUC91sA9mAW4Bg3PWWh9GGDY"
+        libraries={libraries}
+        onLoad={() => console.log("Google Maps API Loaded Successfully")}
+        onError={(error) => console.error("Google Maps API Error:", error)}
+      >
+        <div className="sidebar" style={sidebarStyle}>
+          <Autocomplete
+            onLoad={onLoadAutocomplete}
+            onPlaceChanged={handlePlaceSelect}
+          >
+            <input
+              type="text"
+              placeholder="Search for a location"
+              style={autocompleteInputStyle}
+            />
+          </Autocomplete>
+
+          <div style={inputContainerStyle}>
+            <input
+              type="text"
+              placeholder="Latitude"
+              value={inputLat}
+              onChange={(e) => setInputLat(e.target.value)}
+              style={inputStyle}
+            />
+            <input
+              type="text"
+              placeholder="Longitude"
+              value={inputLng}
+              onChange={(e) => setInputLng(e.target.value)}
+              style={inputStyle}
+            />
+            <button onClick={handleInputChange} style={buttonStyle}>
+              Update Location
+            </button>
+          </div>
+
+          <div style={inputContainerStyle}>
+            <DatePicker
+              selected={selectedDate}
+              onChange={(date) => setSelectedDate(date)}
+              dateFormat="yyyy-MM-dd"
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
+              customInput={
+                <input
+                  type="text"
+                  placeholder="Select Date"
+                  style={inputStyle}
+                  readOnly
+                />
+              }
+            />
+            <input
+              type="text"
+              placeholder="Path"
+              value={path}
+              onChange={(e) => setPath(e.target.value)}
+              style={inputStyle}
+            />
+            <input
+              type="text"
+              placeholder="Row"
+              value={row}
+              onChange={(e) => setRow(e.target.value)}
+              style={inputStyle}
+            />
+            <button onClick={fetchOverpassData} style={buttonStyle}>
+              Get Overpass Data
+            </button>
+          </div>
+        </div>
+
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={defaultCenter}
           zoom={zoomLevel}
           onClick={handleMapClick}
-          onZoomChanged={handleZoomChange} // Handle zoom change
+          onZoomChanged={handleZoomChange}
+          options={{
+            mapId: "56fe3a15c4207d19",
+            zoomControl: false,
+            scaleControl: false,
+            rotateControl: true,
+            cameraControl: true,
+            gestureHandling: "none",
+          }}
           onLoad={(map) => (mapRef.current = map)}
         >
           {marker && <Marker position={marker} />}
 
-          {/* Display NDVI tile as GroundOverlay */}
           {tileUrl && marker && (
             <GroundOverlay
-              key={overlayKey} // Force re-render by changing the key when marker or tile URL changes
-              url={
-                tileUrl
-                  .replace("{z}", zoomLevel) // Replace {z} with zoom level
-                  .replace(
-                    "{x}",
-                    latLngToTileCoords(marker.lat, marker.lng, zoomLevel).xTile
-                  ) // Replace {x}
-                  .replace(
-                    "{y}",
-                    latLngToTileCoords(marker.lat, marker.lng, zoomLevel).yTile
-                  ) // Replace {y}
-              }
+              key={overlayKey}
+              url={tileUrl
+                .replace("{z}", zoomLevel)
+                .replace(
+                  "{x}",
+                  latLngToTileCoords(marker.lat, marker.lng, zoomLevel).xTile
+                )
+                .replace(
+                  "{y}",
+                  latLngToTileCoords(marker.lat, marker.lng, zoomLevel).yTile
+                )}
               bounds={{
                 north: marker.lat + 0.05,
                 south: marker.lat - 0.05,
@@ -133,102 +253,57 @@ function MyMap() {
             />
           )}
         </GoogleMap>
-      </LoadScript>
-
-      <div style={infoWindowContainerStyle}>
-        <div style={inputContainerStyle}>
-          <input
-            type="text"
-            placeholder="Latitude"
-            value={inputLat}
-            onChange={(e) => setInputLat(e.target.value)}
-            style={inputStyle}
-          />
-          <input
-            type="text"
-            placeholder="Longitude"
-            value={inputLng}
-            onChange={(e) => setInputLng(e.target.value)}
-            style={inputStyle}
-          />
-          <button onClick={handleInputChange} style={buttonStyle}>
-            Update Location
-          </button>
-        </div>
-
-        {marker && (
-          <div style={infoWindowStyle}>
-            <h3 style={infoTitleStyle}>Marker Location</h3>
-            <p style={infoTextStyle}>
-              Lat: {marker.lat.toFixed(6)}, Lng: {marker.lng.toFixed(6)}
-            </p>
-          </div>
-        )}
-
-        {ndviData && (
-          <div style={infoWindowStyle}>
-            <h3 style={infoTitleStyle}>NDVI Data</h3>
-            <p>{ndviData}</p>
-          </div>
-        )}
-      </div>
+      </LoadScriptNext>
     </div>
   );
 }
 
-// Shifting the container slightly up and left
-const infoWindowContainerStyle = {
+// Styles for the input and info windows
+const sidebarStyle = {
   position: "absolute",
-  bottom: "80px", // Moved slightly up
-  left: "40px", // Moved slightly left
-  zIndex: 1000, // Ensure it stays on top of the map
+  top: 0,
+  left: 0,
+  width: "300px",
+  height: "100%",
+  backgroundColor: "#fff",
+  padding: "20px",
+  boxShadow: "2px 0 5px rgba(0,0,0,0.3)",
+  zIndex: 1000,
+  display: "flex",
+  flexDirection: "column",
+};
+
+const autocompleteInputStyle = {
+  width: "100%",
+  padding: "10px",
+  borderRadius: "5px",
+  border: "1px solid #ccc",
+  marginBottom: "10px",
+  fontSize: "16px",
 };
 
 const inputContainerStyle = {
   display: "flex",
   flexDirection: "column",
-  marginBottom: "10px", // Add space between inputs and the info window
-  width: "220px", // Make input width match the info window width
+  marginBottom: "20px",
 };
 
 const inputStyle = {
-  marginBottom: "8px",
   padding: "10px",
   borderRadius: "5px",
   border: "1px solid #ccc",
-  width: "100%", // Take full width of container
-  backgroundColor: "rgba(250, 250, 250, 1)", // Semi-transparent light gray
-  boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.6)",
+  marginBottom: "10px",
+  fontSize: "16px",
 };
 
 const buttonStyle = {
   padding: "10px",
-  backgroundColor: "rgba(20, 20, 20, 0.6)", // Darker gray button
+  backgroundColor: "#007BFF",
   color: "white",
   border: "none",
   borderRadius: "5px",
   cursor: "pointer",
-  width: "100%", // Take full width of container
-  boxShadow: "0px 0px 5px rgba(0, 0, 0, 0.6)",
-};
-
-const infoWindowStyle = {
-  backgroundColor: "rgba(20, 20, 20, 0.6)", // Slight gray background for the info window
-  padding: "12px",
-  borderRadius: "5px",
-  boxShadow: "0px 0px 10px rgba(0,0,0,0.4)",
-  color: "white", // White text for contrast
-  width: "220px", // Width matches the inputs
-};
-
-const infoTitleStyle = {
-  marginBottom: "6px",
   fontSize: "16px",
-  fontWeight: "bold",
-};
-
-const infoTextStyle = {
-  fontSize: "14px",
 };
 
 export default React.memo(MyMap);
