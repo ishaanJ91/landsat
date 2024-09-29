@@ -186,6 +186,9 @@ app.get("/profile", (req, res) => {
 app.get("/earth-engine-data", (req, res) => {
   const { longitude, latitude } = req.query;
 
+  const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+  console.log("Full local URL:", fullUrl);
+
   if (!longitude || !latitude) {
     return res.status(400).json({ error: "Missing latitude or longitude" });
   }
