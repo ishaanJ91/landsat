@@ -14,6 +14,17 @@ import MapSidebar from "./MapSidebar";
 // Move the libraries array outside the component to prevent reloading
 const libraries = ["places"]; // Add 'places' to load Places API
 
+const replaceXYZ = (url, lat, lng, zoom) => {
+  const { xTile, yTile } = latLngToTileCoords(lat, lng, zoom);
+  const replacedUrl = url
+    .replace("{z}", zoom) // Replace {z} with zoom level
+    .replace("{x}", xTile) // Replace {x} with x tile coordinate
+    .replace("{y}", yTile); // Replace {y} with y tile coordinate
+
+  console.log("Replaced NDVI URL:", replacedUrl);
+  return replacedUrl;
+};
+
 const containerStyle = {
   width: "100vw",
   height: "100vh",
@@ -226,6 +237,7 @@ function MyMap() {
   const [inputLat, setInputLat] = useState("");
   const [inputLng, setInputLng] = useState("");
   const [ndviData, setNdviData] = useState(null); // Store NDVI data
+  const [ndviGrid, setNdviGrid] = useState(null);
   const [tileUrl, setTileUrl] = useState(null); // Store NDVI tile URL
   const [path, setPath] = useState(""); // Store Path value for overpass prediction
   const [row, setRow] = useState(""); // Store Row value for overpass prediction
@@ -246,7 +258,7 @@ function MyMap() {
         }
       );
       console.log("NDVI data:", response.data);
-      setNdviData(response.data.ndvi); // Set NDVI data
+      setNdviGrid(response.data.ndviPixels); // Set the 3x3 NDVI grid
       setTileUrl(response.data.tileUrl); // Set NDVI tile URL
       setOverlayKey(Date.now()); // Update key to force re-rendering of GroundOverlay
     } catch (error) {
@@ -372,23 +384,13 @@ function MyMap() {
             {tileUrl && marker && (
               <GroundOverlay
                 key={overlayKey}
-                url={tileUrl
-                  .replace("{z}", zoomLevel)
-                  .replace(
-                    "{x}",
-                    latLngToTileCoords(marker.lat, marker.lng, zoomLevel).xTile
-                  )
-                  .replace(
-                    "{y}",
-                    latLngToTileCoords(marker.lat, marker.lng, zoomLevel).yTile
-                  )}
+                url={replaceXYZ(tileUrl, marker.lat, marker.lng, zoomLevel)}
                 bounds={{
                   north: marker.lat + 0.05,
                   south: marker.lat - 0.05,
                   east: marker.lng + 0.05,
                   west: marker.lng - 0.05,
                 }}
-                opacity={0.7}
               />
             )}
           </GoogleMap>
@@ -478,6 +480,8 @@ function MyMap() {
           row={row}
           setRow={setRow}
           fetchOverpassData={fetchOverpassData}
+          tileUrl={tileUrl}
+          ndviGrid={ndviGrid}
         />
       </LoadScript>
     </div>

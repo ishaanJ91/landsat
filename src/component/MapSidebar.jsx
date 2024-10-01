@@ -20,6 +20,7 @@ function MapSidebar({
   row,
   setRow,
   fetchOverpassData,
+  ndviGrid, // Add ndviGrid prop
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -36,6 +37,15 @@ function MapSidebar({
       setIsExpanded(true);
     }
   }, [inputLat, inputLng]);
+
+  // Helper function to get NDVI color
+  const getNDVIColor = (ndvi) => {
+    if (ndvi < 0) return "#FF0000"; // Red for low NDVI
+    if (ndvi < 0.2) return "#FFA500"; // Orange
+    if (ndvi < 0.4) return "#FFFF00"; // Yellow
+    if (ndvi < 0.6) return "#ADFF2F"; // Light green
+    return "#008000"; // Dark green
+  };
 
   return (
     <div
@@ -74,62 +84,6 @@ function MapSidebar({
 
       {isExpanded && (
         <>
-          {/* Location Details (Mock Section for Google-like Sidebar) */}
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex flex-col items-center mb-3">
-              {/* <img
-                src={Pixel}
-                alt="Location thumbnail"
-                className="w-full my-3 rounded-lg"
-              /> */}
-              <div>
-                <h2 className="font-bold text-lg">
-                  Golden Gate National Recreation Area
-                </h2>
-              </div>
-            </div>
-            <p className="text-gray-700 text-sm">
-              Coastal urban park with historic sites & activities from bicycling
-              to hiking to water sports.
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="p-4 flex justify-around border-b border-gray-200">
-            <button className="flex flex-col items-center text-gray-800 hover:text-black">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M6.32 2.577a49.255 49.255 0 0 1 11.36 0c1.497.174 2.57 1.46 2.57 2.93V21a.75.75 0 0 1-1.085.67L12 18.089l-7.165 3.583A.75.75 0 0 1 3.75 21V5.507c0-1.47 1.073-2.756 2.57-2.93Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-
-              <span className="text-sm"> Save </span>
-            </button>
-            <button className="flex flex-col items-center text-gray-800 hover:text-black">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="size-6"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"
-                  clipRule="evenodd"
-                />
-              </svg>
-
-              <span className="text-sm"> Download </span>
-            </button>
-          </div>
-
           {/* Latitude & Longitude Inputs */}
           <div className="p-4">
             <h3 className="text-sm font-semibold mb-2">Update Location</h3>
@@ -157,49 +111,30 @@ function MapSidebar({
             </div>
           </div>
 
-          {/* Date Picker, Path & Row Inputs */}
+          {/* NDVI Grid Display */}
           <div className="p-4">
-            <h3 className="text-sm font-semibold mb-2">
-              Satellite Overpass Data
-            </h3>
-            <div className="flex flex-col mb-4">
-              <DatePicker
-                selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
-                dateFormat="yyyy-MM-dd"
-                showMonthDropdown
-                showYearDropdown
-                dropdownMode="select"
-                customInput={
-                  <input
-                    type="text"
-                    placeholder="Select Date"
-                    className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                    readOnly
-                  />
-                }
-              />
-              <input
-                type="text"
-                placeholder="Path"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <input
-                type="text"
-                placeholder="Row"
-                value={row}
-                onChange={(e) => setRow(e.target.value)}
-                className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-              />
-              <button
-                onClick={fetchOverpassData}
-                className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-              >
-                Get Overpass Data
-              </button>
-            </div>
+            <h3 className="text-sm font-semibold mb-2">NDVI Grid</h3>
+            {ndviGrid ? (
+              <div className="grid grid-cols-3 gap-1">
+                {ndviGrid.map((pixel, index) => (
+                  <div
+                    key={index}
+                    className="w-10 h-10"
+                    style={{
+                      backgroundColor: getNDVIColor(pixel.ndvi),
+                      border: "1px solid #ddd",
+                    }}
+                  >
+                    {/* Display NDVI value inside the box */}
+                    <span className="text-xs text-white">
+                      {pixel.ndvi.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No NDVI data available</p>
+            )}
           </div>
         </>
       )}
