@@ -4,9 +4,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const ee = require("@google/earthengine"); // Import Google Earth Engine
-const axios = require("axios"); // Import Axios for overpass prediction
-
+const ee = require("@google/earthengine");
+const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
@@ -39,7 +38,7 @@ app.use(
   })
 );
 
-// Modified User schema to handle optional password for Google OAuth user
+// Modified User schema to handle optional password for Google OAuth users
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -186,28 +185,30 @@ app.get("/profile", (req, res) => {
 app.get("/earth-engine-data", (req, res) => {
   const { longitude, latitude } = req.query;
 
-  const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-  console.log("Full local URL:", fullUrl);
-
   if (!longitude || !latitude) {
     return res.status(400).json({ error: "Missing latitude or longitude" });
   }
 
   try {
-    // Load the latest available Landsat 8 Surface Reflectance Image Collection
+    const targetPoint = ee.Geometry.Point([
+      parseFloat(longitude),
+      parseFloat(latitude),
+    ]);
+
+    // Load the Landsat 8 Surface Reflectance Image Collection
     const landsatSR = ee
       .ImageCollection("LANDSAT/LC08/C02/T1_L2")
-      .filterBounds(
-        ee.Geometry.Point([parseFloat(longitude), parseFloat(latitude)])
-      )
-      .sort("system:time_start", false); // Sort by date, latest first
+      .filterDate("2024-09-01", "2024-09-25")
+      .filterBounds(targetPoint)
+      .sort("system:time_start", false); // Sort by latest image first
 
-    // Get the first (most recent) image from the collection
     landsatSR.size().evaluate((size) => {
       if (size > 0) {
         const image = landsatSR.first();
+
+        // Convert DN values to Surface Reflectance
         const surfaceReflectance = image
-          .select(["SR_B4", "SR_B5"])
+          .select(["SR_B4", "SR_B5"]) // Red (B4) and NIR (B5) bands
           .multiply(0.0000275)
           .add(-0.2);
 
@@ -216,86 +217,52 @@ app.get("/earth-engine-data", (req, res) => {
           .rename("NDVI");
 
         // Define a 90m x 90m region (3x3 pixels) around the point of interest
-        const gridRegion = ee.Geometry.Point([
-          parseFloat(longitude),
-          parseFloat(latitude),
-        ]).buffer(45);
+        const pixelSize = 30; // Landsat pixel size is approx. 30 meters
+        const halfWindowSize = pixelSize * 1.5; // 90m (3x3 grid)
+        const gridRegion = targetPoint.buffer(halfWindowSize).bounds();
 
-        // Cloud detection using QA_PIXEL band
-        const qaPixel = image.select("QA_PIXEL");
+        // Clip NDVI to the grid region
+        const ndviGrid = ndvi.clip(gridRegion);
 
-        // Bits for cloud confidence (bit 4) and cloud (bit 5)
-        const cloudConfidence = qaPixel.bitwiseAnd(1 << 4).neq(0); // High confidence in cloud
-        const cloudFlag = qaPixel.bitwiseAnd(1 << 5).neq(0); // Cloud presence bit
+        // Define the color palette for the NDVI display
+        const ndviPalette = [
+          "#FF0000",
+          "#FFA500",
+          "#FFFF00",
+          "#ADFF2F",
+          "#008000",
+        ]; // Red to green
 
-        // Combine both flags for the final cloud mask
-        const cloudMask = cloudConfidence.or(cloudFlag);
-
-        // Total pixels in the 3x3 grid
-        const totalPixels = ee.Number(
-          qaPixel
-            .reduceRegion({
-              reducer: ee.Reducer.count(),
-              geometry: gridRegion,
-              scale: 30,
-              maxPixels: 1e9,
-            })
-            .get("QA_PIXEL")
-        );
-
-        // Cloud-covered pixels in the 3x3 grid
-        const cloudPixels = ee.Number(
-          cloudMask
-            .reduceRegion({
-              reducer: ee.Reducer.sum(),
-              geometry: gridRegion,
-              scale: 30,
-              maxPixels: 1e9,
-            })
-            .get("QA_PIXEL")
-        );
-
-        // Cloud coverage percentage (ensure it stays between 0-100)
-        const cloudCoveragePercentage = cloudPixels
-          .divide(totalPixels)
-          .multiply(100)
-          .min(100)
-          .max(0);
-
-        // Calculate the mean NDVI value for the 90m x 90m grid
-        const ndviValue = ndvi.reduceRegion({
-          reducer: ee.Reducer.mean(),
-          geometry: gridRegion,
-          scale: 30,
+        // Extract pixel values within the grid
+        const pixelValues = ndviGrid.sample({
+          region: gridRegion,
+          scale: pixelSize, // Use the Landsat pixel size
+          geometries: true,
         });
 
-        // Convert NDVI Map to a tile URL for visualization
-        ndvi.getMap(
-          { min: -1, max: 1, palette: ["brown", "yellow", "green"] },
-          function (map) {
-            const tileUrl = map.urlFormat; // Extract the NDVI tile URL for visualization
+        // Evaluate and return the pixel NDVI values
+        pixelValues.evaluate((result) => {
+          if (result && result.features.length > 0) {
+            // Generate NDVI tile URL for display
+            ndvi.getMap({ min: 0, max: 1, palette: ndviPalette }, (map) => {
+              const tileUrl = map.urlFormat;
 
-            // Evaluate the cloud coverage percentage and NDVI value
-            cloudCoveragePercentage.evaluate((cloudCovPerc) => {
-              ndviValue.evaluate((ndviVal) => {
-                console.log("Cloud Coverage Percentage:", cloudCovPerc);
-                console.log("NDVI Value:", ndviVal);
-
-                res.json({
-                  ndvi: ndviVal.NDVI || "No NDVI data", // NDVI value
-                  cloudCoverage:
-                    cloudCovPerc !== null && !isNaN(cloudCovPerc)
-                      ? `${cloudCovPerc.toFixed(2)}%` // Return valid cloud coverage percentage
-                      : "No cloud data", // Handle invalid cloud data
-                  tileUrl: tileUrl, // URL to visualize NDVI as a tile
-                });
+              res.json({
+                ndviPixels: result.features.map((feature) => ({
+                  lat: feature.geometry.coordinates[1],
+                  lng: feature.geometry.coordinates[0],
+                  ndvi: feature.properties.NDVI,
+                })),
+                tileUrl: tileUrl, // NDVI tile URL
               });
             });
+          } else {
+            res.json({ error: "No NDVI pixel values found in the grid." });
           }
-        );
+        });
       } else {
         res.json({
-          error: "No images found for the specified location.",
+          error: "No images found for the specified date range and location.",
         });
       }
     });
