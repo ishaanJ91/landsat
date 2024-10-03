@@ -26,6 +26,7 @@ export default function MapSidebar({
   addressComponents,
   replacedUrl,
   shareUrl,
+  ndviGrid,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
@@ -80,6 +81,14 @@ export default function MapSidebar({
       console.error("Error saving location data:", error);
     }
   }
+
+  const getNDVIColor = (ndvi) => {
+    if (ndvi < 0) return "#FF0000"; // Red for low NDVI
+    if (ndvi < 0.2) return "#FFA500"; // Orange
+    if (ndvi < 0.4) return "#FFFF00"; // Yellow
+    if (ndvi < 0.6) return "#ADFF2F"; // Light green
+    return "#008000"; // Dark green
+  };
 
   // Function to convert data to CSV format and trigger download
   const downloadCSV = () => {
@@ -328,96 +337,30 @@ export default function MapSidebar({
               </div>
             </div>
 
-            <div className="px-4 mt-2 pt-4">
-              <h2 className="text-2xl font-medium">Satellite Overpass Data</h2>
-              <div className="flex flex-col mb-4">
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
-                  dateFormat="yyyy-MM-dd"
-                  showMonthDropdown
-                  showYearDropdown
-                  dropdownMode="select"
-                  customInput={
-                    <input
-                      type="text"
-                      placeholder="Select Date"
-                      className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                      readOnly
-                    />
-                  }
-                />
-
-                <div className="flex flex-row gap-4 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Path"
-                    value={path}
-                    onChange={(e) => setPath(e.target.value)}
-                    className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Row"
-                    value={row}
-                    onChange={(e) => setRow(e.target.value)}
-                    className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                  />
+            {/* NDVI Grid Display */}
+            <div className="p-4">
+              <h3 className="text-sm font-semibold mb-2">NDVI Grid</h3>
+              {ndviGrid ? (
+                <div className="grid grid-cols-3 gap-1">
+                  {ndviGrid.map((pixel, index) => (
+                    <div
+                      key={index}
+                      className="w-10 h-10"
+                      style={{
+                        backgroundColor: getNDVIColor(pixel.ndvi),
+                        border: "1px solid #ddd",
+                      }}
+                    >
+                      {/* Display NDVI value inside the box */}
+                      <span className="text-xs text-white">
+                        {pixel.ndvi.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-
-                <button
-                  onClick={fetchOverpassData}
-                  className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-                >
-                  Get Overpass Data
-                </button>
-              </div>
-            </div>
-
-            <div className="px-4 mt-2 pt-4">
-              <h2 className="text-2xl font-medium">Satellite Overpass Data</h2>
-              <div className="flex flex-col mb-4">
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
-                  dateFormat="yyyy-MM-dd"
-                  showMonthDropdown
-                  showYearDropdown
-                  dropdownMode="select"
-                  customInput={
-                    <input
-                      type="text"
-                      placeholder="Select Date"
-                      className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                      readOnly
-                    />
-                  }
-                />
-
-                <div className="flex flex-row gap-4 mb-2">
-                  <input
-                    type="text"
-                    placeholder="Path"
-                    value={path}
-                    onChange={(e) => setPath(e.target.value)}
-                    className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Row"
-                    value={row}
-                    onChange={(e) => setRow(e.target.value)}
-                    className="p-2 mb-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-
-                <button
-                  onClick={fetchOverpassData}
-                  className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
-                >
-                  Get Overpass Data
-                </button>
-              </div>
+              ) : (
+                <p>No NDVI data available</p>
+              )}
             </div>
           </>
         )}

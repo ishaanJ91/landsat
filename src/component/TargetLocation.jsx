@@ -23,8 +23,6 @@ const replaceXYZ = (url, lat, lng, zoom) => {
     .replace("{z}", zoom) // Replace {z} with zoom level
     .replace("{x}", xTile) // Replace {x} with x tile coordinate
     .replace("{y}", yTile); // Replace {y} with y tile coordinate
-
-  console.log("Replaced NDVI URL:", replacedUrl);
   return replacedUrl;
 };
 
@@ -240,6 +238,7 @@ function MyMap() {
   const [inputLat, setInputLat] = useState("");
   const [inputLng, setInputLng] = useState("");
   const [ndviData, setNdviData] = useState(null); // Store NDVI data
+  const [ndviGrid, setNdviGrid] = useState(null);
   const [tileUrl, setTileUrl] = useState(null); // Store NDVI tile URL
   const [path, setPath] = useState(""); // Store Path value for overpass prediction
   const [row, setRow] = useState(""); // Store Row value for overpass prediction
@@ -323,9 +322,10 @@ function MyMap() {
           params: { latitude: lat, longitude: lng },
         }
       );
-      setNdviData(response.data.ndvi);
-      setTileUrl(response.data.tileUrl);
-      setOverlayKey(Date.now());
+      console.log("NDVI data:", response.data);
+      setNdviGrid(response.data.ndviPixels); // Set the 3x3 NDVI grid
+      setTileUrl(response.data.tileUrl); // Set NDVI tile URL
+      setOverlayKey(Date.now()); // Update key to force re-rendering of GroundOverlay
     } catch (error) {
       console.error("Error fetching NDVI data:", error);
     }
@@ -358,7 +358,29 @@ function MyMap() {
     }
   };
 
-  const handleMapClick = (event) => {
+  const convertLatLngToPathRow = async (lat, lng) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/convert-latlng-to-pathrow",
+        {
+          latitude: lat,
+          longitude: lng,
+        }
+      );
+      console.log("Path/Row Conversion:", response.data); // Log the path and row conversion result
+      return response.data;
+    } catch (error) {
+      console.error("Error converting lat/lng to path/row:", error);
+    }
+  };
+
+  // Call this function when a user clicks on the map or enters lat/lng manually
+  const handleLocationSelect = async (lat, lng) => {
+    const pathRow = await convertLatLngToPathRow(lat, lng);
+    console.log("Converted Path/Row:", pathRow); // Log the conversion to the console
+  };
+
+  const handleMapClick = async (event) => {
     const lat = event.latLng.lat();
     const lng = event.latLng.lng();
 
@@ -374,8 +396,8 @@ function MyMap() {
     mapRef.current.panTo(newMarker); // Center map on the new marker
 
     // Fetch NDVI data for the selected location
-    reverseGeocode(lat, lng);
     fetchNDVIData(lat, lng);
+    await handleLocationSelect(lat, lng);
   };
 
   const handleInputChange = () => {
@@ -517,6 +539,7 @@ function MyMap() {
           addressComponents={addressComponents}
           replacedUrl={replacedUrl}
           shareUrl={generateShareURL()}
+          ndviGrid={ndviGrid}
         />
 
         <Coordinates
