@@ -21,7 +21,6 @@ const replaceXYZ = (url, lat, lng, zoom) => {
     .replace("{x}", xTile) // Replace {x} with x tile coordinate
     .replace("{y}", yTile); // Replace {y} with y tile coordinate
 
-  console.log("Replaced NDVI URL:", replacedUrl);
   return replacedUrl;
 };
 
@@ -293,7 +292,29 @@ function MyMap() {
     }
   };
 
-  const handleMapClick = (event) => {
+  const convertLatLngToPathRow = async (lat, lng) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/convert-latlng-to-pathrow",
+        {
+          latitude: lat,
+          longitude: lng,
+        }
+      );
+      console.log("Path/Row Conversion:", response.data); // Log the path and row conversion result
+      return response.data;
+    } catch (error) {
+      console.error("Error converting lat/lng to path/row:", error);
+    }
+  };
+
+  // Call this function when a user clicks on the map or enters lat/lng manually
+  const handleLocationSelect = async (lat, lng) => {
+    const pathRow = await convertLatLngToPathRow(lat, lng);
+    console.log("Converted Path/Row:", pathRow); // Log the conversion to the console
+  };
+
+  const handleMapClick = async (event) => {
     const lat = event.latLng.lat();
     const lng = event.latLng.lng();
 
@@ -310,6 +331,7 @@ function MyMap() {
 
     // Fetch NDVI data for the selected location
     fetchNDVIData(lat, lng);
+    await handleLocationSelect(lat, lng);
   };
 
   const handleInputChange = () => {
