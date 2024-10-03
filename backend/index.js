@@ -34,7 +34,7 @@ mongoose.connect(process.env.MONGO_URL, {
 app.use(
   cors({
     credentials: true,
-    origin: "http://localhost:3000", // Allow requests from your frontend
+    origin: "http://localhost:3000", // Adjust as per your frontend
   })
 );
 
@@ -80,7 +80,6 @@ app.post("/register", async (req, res) => {
 
 app.post("/register-google", async (req, res) => {
   const { email, name } = req.body;
-
   try {
     // Use the findOrCreateUser function to either find or create the user
     const user = await findOrCreateUser(email, name);
@@ -92,7 +91,6 @@ app.post("/register-google", async (req, res) => {
       {},
       (err, token) => {
         if (err) throw err;
-
         // Send the JWT token as a cookie and user data as a response
         res
           .cookie("token", token, {
@@ -181,6 +179,148 @@ app.get("/profile", (req, res) => {
   });
 });
 
+// Convert lat/lng to path/row
+const getPathRowFromLatLng = async (latitude, longitude) => {
+  try {
+    const url = `https://nimbus.cr.usgs.gov/arcgis/rest/services/LLook_Outlines/MapServer/1/query?where=MODE=%27D%27&geometry=${latitude},${longitude}&geometryType=esriGeometryPoint&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&returnTrueCurves=false&returnIdsOnly=false&returnCountOnly=false&returnZ=false&returnM=false&returnDistinctValues=false&f=json`;
+
+    const response = await axios.get(url);
+
+    if (
+      response.data &&
+      response.data.features &&
+      response.data.features.length > 0
+    ) {
+      const { PATH, ROW } = response.data.features[0].attributes;
+      console.log(`Converted Path: ${PATH}, Row: ${ROW}`);
+      return { path: PATH, row: ROW };
+    } else {
+      throw new Error("Failed to retrieve Path/Row for the given lat/lng.");
+    }
+  } catch (error) {
+    console.error("Error fetching path/row from USGS API:", error);
+    return null;
+  }
+};
+
+// Overpass Prediction
+const fetchOverpassPrediction = async (year, month, day, path, row) => {
+  try {
+    const correctedMonth = month.substring(0, 3);
+    const url = `https://landsat.usgs.gov/landsat/all_in_one_pending_acquisition/L9/Pend_Acq/y${year}/${correctedMonth}/${correctedMonth}-${day}-${year}.txt`;
+
+    const response = await axios.get(url);
+
+    if (response.status === 200) {
+      const content = response.data.split("\n");
+      const separator = "----------------------";
+      const separatorIndices = content
+        .map((line, index) => (line.includes(separator) ? index : -1))
+        .filter((index) => index !== -1);
+
+      if (separatorIndices.length >= 2) {
+        const dataLines = content.slice(separatorIndices[1] + 1);
+        const filteredData = dataLines
+          .map((line) => line.trim().split(/\s+/))
+          .filter((lineData) => lineData[0] === path && lineData[1] === row);
+
+        if (filteredData.length > 0) {
+          const julianDate = filteredData[0][2];
+          const gregorianDate = julianToGregorian(julianDate);
+
+          return {
+            status: "success",
+            message: `Overpass found for Path: ${path}, Row: ${row}, Julian Date: ${julianDate}`,
+            gregorianDate,
+          };
+        } else {
+          return {
+            status: "error",
+            message: "No overpass found for the given Path/Row.",
+          };
+        }
+      } else {
+        return { status: "error", message: "No valid data found in response." };
+      }
+    } else {
+      return {
+        status: "error",
+        message: `Failed to retrieve data. Status: ${response.status}`,
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching overpass prediction:", error);
+    return { status: "error", message: "Error fetching overpass prediction." };
+  }
+};
+
+// Julian to Gregorian conversion function
+function julianToGregorian(julianDate) {
+  const [julianDay, time] = julianDate.split("-");
+  const dayOfYear = parseInt(julianDay, 10);
+  if (isNaN(dayOfYear)) {
+    throw new Error("Invalid Julian day format");
+  }
+
+  const year = new Date().getFullYear();
+  const gregorianDate = new Date(year, 0);
+  // Start at the beginning of the year (January 1st)
+  gregorianDate.setDate(dayOfYear); // Set the day of the year
+
+  let isoString = gregorianDate.toISOString().split("T")[0]; // Get YYYY-MM-DD format
+  if (time) {
+    isoString += ` ${time}`; // Append the time if available
+  }
+
+  return isoString;
+}
+
+// Endpoint to convert lat/lng to path/row
+app.post("/convert-latlng-to-pathrow", async (req, res) => {
+  const { latitude, longitude } = req.body;
+
+  if (!latitude || !longitude) {
+    return res.status(400).json({ error: "Missing latitude or longitude" });
+  }
+
+  const result = await getPathRowFromLatLng(latitude, longitude);
+  if (result) {
+    res.json(result);
+  } else {
+    res
+      .status(500)
+      .json({ error: "Failed to convert coordinates to Path/Row." });
+  }
+});
+
+// Overpass Prediction API endpoint
+app.post("/predict-overpass", async (req, res) => {
+  const { latitude, longitude, year, month, day } = req.body;
+
+  if (!latitude || !longitude || !year || !month || !day) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  // Convert lat/lng to path/row
+  const pathRow = await getPathRowFromLatLng(latitude, longitude);
+
+  if (pathRow) {
+    const { path, row } = pathRow;
+    const predictionResult = await fetchOverpassPrediction(
+      year,
+      month,
+      day,
+      path,
+      row
+    );
+    res.json(predictionResult);
+  } else {
+    res
+      .status(500)
+      .json({ error: "Failed to retrieve Path/Row for the location." });
+  }
+});
+
 // Earth Engine route to fetch NDVI data and tile URL
 app.get("/earth-engine-data", (req, res) => {
   const { longitude, latitude } = req.query;
@@ -195,7 +335,6 @@ app.get("/earth-engine-data", (req, res) => {
       parseFloat(latitude),
     ]);
 
-    // Load the Landsat 8 Surface Reflectance Image Collection
     const landsatSR = ee
       .ImageCollection("LANDSAT/LC08/C02/T1_L2")
       .filterDate("2024-09-01", "2024-09-25")
@@ -206,9 +345,8 @@ app.get("/earth-engine-data", (req, res) => {
       if (size > 0) {
         const image = landsatSR.first();
 
-        // Convert DN values to Surface Reflectance
         const surfaceReflectance = image
-          .select(["SR_B4", "SR_B5"]) // Red (B4) and NIR (B5) bands
+          .select(["SR_B4", "SR_B5"])
           .multiply(0.0000275)
           .add(-0.2);
 
@@ -216,34 +354,28 @@ app.get("/earth-engine-data", (req, res) => {
           .normalizedDifference(["SR_B5", "SR_B4"])
           .rename("NDVI");
 
-        // Define a 90m x 90m region (3x3 pixels) around the point of interest
-        const pixelSize = 30; // Landsat pixel size is approx. 30 meters
-        const halfWindowSize = pixelSize * 1.5; // 90m (3x3 grid)
+        const pixelSize = 30;
+        const halfWindowSize = pixelSize * 1.5;
         const gridRegion = targetPoint.buffer(halfWindowSize).bounds();
 
-        // Clip NDVI to the grid region
         const ndviGrid = ndvi.clip(gridRegion);
 
-        // Define the color palette for the NDVI display
         const ndviPalette = [
           "#FF0000",
           "#FFA500",
           "#FFFF00",
           "#ADFF2F",
           "#008000",
-        ]; // Red to green
+        ];
 
-        // Extract pixel values within the grid
         const pixelValues = ndviGrid.sample({
           region: gridRegion,
-          scale: pixelSize, // Use the Landsat pixel size
+          scale: pixelSize,
           geometries: true,
         });
 
-        // Evaluate and return the pixel NDVI values
         pixelValues.evaluate((result) => {
           if (result && result.features.length > 0) {
-            // Generate NDVI tile URL for display
             ndvi.getMap({ min: 0, max: 1, palette: ndviPalette }, (map) => {
               const tileUrl = map.urlFormat;
 
@@ -253,7 +385,7 @@ app.get("/earth-engine-data", (req, res) => {
                   lng: feature.geometry.coordinates[0],
                   ndvi: feature.properties.NDVI,
                 })),
-                tileUrl: tileUrl, // NDVI tile URL
+                tileUrl: tileUrl,
               });
             });
           } else {
@@ -272,127 +404,7 @@ app.get("/earth-engine-data", (req, res) => {
   }
 });
 
-// Overpass Prediction
-const fetchOverpassPrediction = async (year, month, day, path, row) => {
-  try {
-    const correctedMonth = month.substring(0, 3); // Correcting the month to 3 letters
-    const url = `https://landsat.usgs.gov/landsat/all_in_one_pending_acquisition/L9/Pend_Acq/y${year}/${correctedMonth}/${correctedMonth}-${day}-${year}.txt`;
-
-    console.log("Constructed Landsat acquisition URL:", url);
-    const response = await axios.get(url);
-
-    if (response.status === 200) {
-      console.log("Successfully retrieved data from Landsat URL");
-
-      const content = response.data.split("\n");
-      console.log("Content retrieved:", content.slice(0, 10)); // Log first 10 lines for brevity
-
-      const separator = "----------------------";
-      const separatorIndices = content
-        .map((line, index) => (line.includes(separator) ? index : -1))
-        .filter((index) => index !== -1);
-
-      if (separatorIndices.length >= 2) {
-        const dataLines = content.slice(separatorIndices[1] + 1);
-        console.log(
-          "Data lines after second separator:",
-          dataLines.slice(0, 10)
-        ); // Log first 10 data lines for brevity
-
-        // Parse the data and compare path and row
-        const filteredData = dataLines
-          .map((line) => line.trim().split(/\s+/))
-          .filter((lineData) => lineData[0] === path && lineData[1] === row);
-
-        console.log("Filtered Data for Path and Row:", filteredData);
-
-        if (filteredData.length > 0) {
-          // Assuming we have the Julian date in the third column
-          const julianDate = filteredData[0][2]; // E.g., "272-01:24:05"
-          console.log("Matching Julian Date found:", julianDate);
-
-          // Convert Julian date to Gregorian
-          const gregorianDate = julianToGregorian(julianDate);
-          console.log("Converted Gregorian Date:", gregorianDate);
-
-          return {
-            status: "success",
-            message: `Overpass found for Path: ${path}, Row: ${row}, Julian Date: ${julianDate}`,
-            gregorianDate, // Include the converted Gregorian date in the response
-          };
-        } else {
-          return {
-            status: "error",
-            message: `No overpass found for Path: ${path}, Row: ${row}`,
-          };
-        }
-      } else {
-        return {
-          status: "error",
-          message: "Data format error: Missing separator lines",
-        };
-      }
-    } else {
-      return {
-        status: "error",
-        message: `Failed to retrieve data. Status code: ${response.status}`,
-      };
-    }
-  } catch (error) {
-    console.error("Error fetching overpass prediction:", error);
-    return {
-      status: "error",
-      message: "Error fetching overpass prediction",
-    };
-  }
-};
-
-// Julian to Gregorian conversion function
-// Function to convert Julian Date to Gregorian Date
-function julianToGregorian(julianDate) {
-  // Split the Julian date into day and time components
-  const [julianDay, time] = julianDate.split("-");
-
-  // Check if the day part is a valid number
-  const dayOfYear = parseInt(julianDay, 10);
-
-  if (isNaN(dayOfYear)) {
-    throw new Error("Invalid Julian day format");
-  }
-
-  // Create a new Date object with the given year and day of the year
-  const year = new Date().getFullYear(); // Assume the current year for simplicity
-  const gregorianDate = new Date(year, 0); // Start at the beginning of the year (January 1st)
-  gregorianDate.setDate(dayOfYear); // Set the day of the year
-
-  // If there's a time component, append it to the date
-  let isoString = gregorianDate.toISOString().split("T")[0]; // Get YYYY-MM-DD format
-  if (time) {
-    isoString += ` ${time}`; // Append the time
-  }
-
-  return isoString;
-}
-
-// Overpass Prediction API endpoint
-app.get("/landsat-overpass", async (req, res) => {
-  const { year, month, day, path, row } = req.query;
-
-  if (!year || !month || !day || !path || !row) {
-    return res.status(400).json({ error: "Missing required parameters" });
-  }
-
-  const predictionResult = await fetchOverpassPrediction(
-    year,
-    month,
-    day,
-    path,
-    row
-  );
-  res.json(predictionResult);
-});
-
-// Logout
+// Logout route
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
