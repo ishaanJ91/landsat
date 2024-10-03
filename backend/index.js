@@ -14,7 +14,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
 // Load Earth Engine private key
-const privateKey = require("/Users/nishitjain/Desktop/codimg/landsat/boxwood-scope-436601-g3-602d42046b96.json");
+const privateKey = require("/Users/macncheese/Desktop/trial/landsat/boxwood-scope-436601-g3-602d42046b96.json");
 
 // Authenticate Earth Engine using the service account
 ee.data.authenticateViaPrivateKey(privateKey, () => {
@@ -46,9 +46,21 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: false, default: null }, // Password is optional
 });
 
-const User = mongoose.model("User", userSchema); // Ensure the model uses the updated schema
+const placeSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  image: String, // Store the grid image URL or base64 string
+  locationName: String,
+  region: String,
+  coordinates: {
+    latitude: String,
+    longitude: String,
+  },
+  dateSaved: { type: Date, default: Date.now },
+});
 
-// Function to find or create a user
+const User = mongoose.model("User", userSchema);
+const Place = mongoose.model("Place", placeSchema);
+
 async function findOrCreateUser(email, name) {
   try {
     let user = await User.findOne({ email });
@@ -426,6 +438,42 @@ app.get("/landsat-overpass", async (req, res) => {
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
+
+app.post("/save", async (req, res) => {
+  const { token } = req.cookies;
+  const { image, locationName, region, coordinates } = req.body;
+
+  try {
+    // Verify the JWT token
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+      if (err) {
+        // If there's an error during verification, return a 403 status code
+        return res.status(403).json({ message: "Invalid token" });
+      }
+
+      try {
+        // Create the place document in the database
+        const placeDoc = await Place.create({
+          user: userData.id,
+          image,
+          locationName,
+          region,
+          coordinates,
+        });
+
+        // Respond with success and placeDoc
+        return res.status(201).json({ message: "Location saved successfully!", placeDoc });
+      } catch (dbError) {
+        // If there's an error while saving to the database, return a 500 status code
+        return res.status(500).json({ message: "Error saving location", error: dbError });
+      }
+    });
+  } catch (error) {
+    // Handle unexpected errors
+    return res.status(500).json({ message: "Unexpected server error", error });
+  }
+});
+
 
 // Start the server
 app.listen(3001, () => {

@@ -18,6 +18,7 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "express": "^4.21.0",
+    "html2canvas": "^1.4.1",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "mongoose": "^8.6.3",
@@ -28,6 +29,7 @@
     "react-router-dom": "^6.26.2",
     "react-scripts": "5.0.1",
     "redux": "^5.0.1",
+    "rsuite": "^5.71.0",
     "tailwind": "^4.0.0",
     "web-vitals": "^2.1.4"
   },

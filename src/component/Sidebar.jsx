@@ -9,7 +9,7 @@ export default function Sidebar() {
 
   return (
     <div
-      className={`fixed top-0 left-0 h-full bg-gray-900 ${
+      className={`fixed top-0 left-0 h-full bg-white ${
         isOpen ? "w-64" : "w-16"
       } transition-all duration-300`}
     >
