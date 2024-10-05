@@ -1,27 +1,32 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import logo from "../images/logo.png";
+import SaveSidebar from "./SaveSidebar"; // Import the SaveSidebar component
 
 export default function Sidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isSaveOpen, setIsSaveOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
+  // Function to open the save sidebar
+  const handleSaveClick = () => {
+    setIsSaveOpen(true); // Open the Save overlay
+  };
+
+  // Function to close the save sidebar
+  const closeSaveOverlay = () => {
+    setIsSaveOpen(false); // Close the Save overlay
   };
 
   return (
-    <div
-      className={`fixed top-0 left-0 h-full bg-white ${
-        isOpen ? "w-64" : "w-16"
-      } transition-all duration-300`}
-    >
-      <button onClick={toggleSidebar} className="p-4 text-gray-100">
-        {isOpen ? "Close" : "Open"}
-      </button>
-      <ul className={`${isOpen ? "block" : "hidden"} mt-4`}>
-        <li className="p-4 hover:bg-gray-700">Dashboard</li>
-        <li className="p-4 hover:bg-gray-700">Settings</li>
-        <li className="p-4 hover:bg-gray-700">Profile</li>
-        <li className="p-4 hover:bg-gray-700">Logout</li>
-      </ul>
-    </div>
+    <>
+      {/* Sidebar */}
+      
+
+      {/* Conditionally render the SaveSidebar overlay */}
+      {/* {isSaveOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-75 flex items-center justify-center">
+            <SaveSidebar onClose={closeSaveOverlay} />
+        </div>
+      )} */}
+    </>
   );
 }
