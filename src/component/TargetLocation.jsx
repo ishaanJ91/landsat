@@ -248,9 +248,29 @@ function MyMap() {
   const [zoomLevel, setZoomLevel] = useState(10); // Store current zoom level
   const [overlayKey, setOverlayKey] = useState(Date.now()); // Key for re-rendering overlay
   const [autocomplete, setAutocomplete] = useState(null); // Store Autocomplete instance
-  const [addressComponents, setAddressComponents] = useState(null); // To store address details like country/region/state
+  const [addressComponents, setAddressComponents] = useState({});
+  const [error, setError] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const formatDateTime = (dateString) => {
+    const dateObj = new Date(dateString);
+    const day = dateObj.getDate();
+    const month = dateObj.toLocaleString("default", { month: "long" });
+    const year = dateObj.getFullYear();
+  
+    // Get the appropriate suffix for the day
+    const daySuffix =
+      day % 10 === 1 && day !== 11
+        ? "st"
+        : day % 10 === 2 && day !== 12
+        ? "nd"
+        : day % 10 === 3 && day !== 13
+        ? "rd"
+        : "th";
+  
+    return `${day}${daySuffix} ${month}, ${year}`;
+  };
 
   useEffect(() => {
     if (marker) {
@@ -293,12 +313,6 @@ function MyMap() {
       }
     }
   }, [location.search]);
-
-  useEffect(() => {
-    if (marker) {
-      fetchNDVIData(marker.lat, marker.lng);
-    }
-  }, [marker]);
 
   useEffect(() => {
     if (marker) {
@@ -350,13 +364,52 @@ function MyMap() {
 
       // Fetch data from the backend
       const response = await axios.get(url);
+      const formattedDate = formatDateTime(response.data.date);
 
-      console.log("Overpass data:", response.data);
-      setOverpassData(response.data); // Set overpass data
+
+      setOverpassData({
+        date: formattedDate, // Use formatted date here
+        time: response.data.time, // Or add time formatting if required
+      });
     } catch (error) {
       console.error("Error fetching overpass data:", error);
     }
   };
+
+  const handleCheckOverpass = async (lat, lng) => {
+    console.log("Checking overpass for Lat:", lat, "Lng:", lng); // Log the lat/lng values
+
+    if (!lat || !lng) {
+      console.log("Invalid Lat/Long"); // Log invalid input
+      setError("Please enter valid latitude and longitude.");
+      return;
+    }
+
+    const startDate = new Date().toISOString().split("T")[0]; // Log current date
+    console.log("Start Date:", startDate); // Log start date
+
+    try {
+      const response = await axios.post(
+        "http://localhost:3001/predict-overpass",
+        {
+          latitude: lat,
+          longitude: lng,
+          startDate,
+        }
+      );
+
+      console.log("Response from overpass prediction:", response.data); // Log response data
+      setOverpassData({
+        date: response.data.prediction.nextOverpassDate,
+        time: response.data.prediction.nextOverpassTime,
+      }); // Store the response data
+      setError(null); // Clear error if successful
+    } catch (error) {
+      console.error("Error checking overpass:", error); // Log error
+      setError("Failed to fetch overpass data");
+    }
+  };
+  
 
   const convertLatLngToPathRow = async (lat, lng) => {
     try {
@@ -397,6 +450,7 @@ function MyMap() {
 
     // Fetch NDVI data for the selected location
     fetchNDVIData(lat, lng);
+    handleCheckOverpass(lat, lng);
     await handleLocationSelect(lat, lng);
   };
 
@@ -411,6 +465,7 @@ function MyMap() {
 
       // Fetch NDVI data for the input location
       fetchNDVIData(lat, lng);
+      handleCheckOverpass(lat, lng);
     }
   };
 
@@ -435,6 +490,7 @@ function MyMap() {
 
       // Fetch NDVI data for the selected location
       fetchNDVIData(lat, lng);
+      handleCheckOverpass(lat, lng);
     }
   };
 
@@ -445,29 +501,34 @@ function MyMap() {
   const reverseGeocode = (lat, lng) => {
     const geocoder = new window.google.maps.Geocoder();
     const location = { lat, lng };
-
+  
     geocoder.geocode({ location }, (results, status) => {
       if (status === "OK" && results[0]) {
-        // Extract relevant address components (e.g., country, region, state)
+        // Extract relevant address components (e.g., country, state, region)
         const addressDetails = results[0].address_components.reduce(
           (acc, component) => {
-            if (component.types.includes("country"))
+            if (component.types.includes("country")) {
               acc.country = component.long_name;
-            if (component.types.includes("administrative_area_level_1"))
+            }
+            if (component.types.includes("administrative_area_level_1")) {
               acc.state = component.long_name;
-            if (component.types.includes("administrative_area_level_2"))
+            }
+            if (component.types.includes("administrative_area_level_2")) {
               acc.region = component.long_name;
+            }
             return acc;
           },
           {}
         );
-
-        setAddressComponents(addressDetails); // Set address details
+  
+        // Update the state with address details
+        setAddressComponents(addressDetails); 
       } else {
         console.error("Geocode error:", status);
       }
     });
   };
+  
 
   const replacedUrl =
     tileUrl && marker && replaceXYZ(tileUrl, marker.lat, marker.lng, zoomLevel);
@@ -479,8 +540,9 @@ function MyMap() {
       style={{ position: "relative" }}
     >
       <LoadScript
-        googleMapsApiKey="AIzaSyBKAplgzV0XUC91sA9mAW4Bg3PWWh9GGDY"
-        libraries={libraries} // Include the Places library
+        googleMapsApiKey="AIzaSyCdpN3Sn0HZnS31DBaIgdk4DOToBvDQYUk"
+        // AIzaSyCdpN3Sn0HZnS31DBaIgdk4DOToBvDQYUk
+        libraries={libraries} 
         onLoad={() => console.log("Google Maps API Loaded Successfully")}
         onError={(error) => console.error("Google Maps API Error:", error)}
       >
@@ -494,6 +556,7 @@ function MyMap() {
             onZoomChanged={handleZoomChange}
             options={{
               styles: customMapStyle,
+              zoomControl: true,
               mapTypeControl: false,
               fullscreenControl: false,
               minZoom: 3, // Set minimum zoom level to prevent excessive zooming out
@@ -514,7 +577,6 @@ function MyMap() {
                   east: marker.lng + 0.05,
                   west: marker.lng - 0.05,
                 }}
-                opacity={0.7}
               />
             )}
           </GoogleMap>
@@ -539,7 +601,9 @@ function MyMap() {
           addressComponents={addressComponents}
           replacedUrl={replacedUrl}
           shareUrl={generateShareURL()}
+          handleCheckOverpass={handleCheckOverpass}
           ndviGrid={ndviGrid}
+          overpassData={overpassData}
         />
 
         <Coordinates
