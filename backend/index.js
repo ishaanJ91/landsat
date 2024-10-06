@@ -14,7 +14,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
 // Load Earth Engine private key
-const privateKey = require("/Users/macncheese/Desktop/trial/landsat/wise-diagram-437711-b1-e3a769fd19d9.json");
+const privateKey = require("/Users/macncheese/Desktop/trial/landsat/wise-diagram-437711-b1-5998d0c3c8fe.json");
 
 // Authenticate Earth Engine using the service account
 ee.data.authenticateViaPrivateKey(privateKey, () => {
