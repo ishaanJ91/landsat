@@ -1,8 +1,7 @@
-import React, {useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-export default function SaveSidebar({ onClose, setInputLat, setInputLng, setIsExpanded }) {
-
+export default function SaveSidebar({ onClose }) {
   const [savedLocations, setSavedLocations] = useState([]);
 
   // Function to fetch saved locations
@@ -14,6 +13,7 @@ export default function SaveSidebar({ onClose, setInputLat, setInputLng, setIsEx
       console.error("Error fetching saved locations:", error);
     }
   };
+  
   useEffect(() => {
     fetchSavedLocations();
   }, []);
@@ -31,55 +31,59 @@ export default function SaveSidebar({ onClose, setInputLat, setInputLng, setIsEx
 
   // Function to handle viewing details of a location
   const handleViewDetails = (latitude, longitude) => {
-    // Set the map coordinates to the selected location
-    setInputLat(latitude);
-    setInputLng(longitude);
-    setIsExpanded(true); // Expand the sidebar if collapsed
-
-    // Close the save sidebar
-    onClose();
+    // Redirect to the target location URL with the given latitude and longitude
+    window.location.href = `http://localhost:3000/dashboard/target-location?lat=${latitude}&lng=${longitude}&zoom=10`;
   };
-
-  // Fetch saved locations when component mounts
-  useEffect(() => {
-    fetchSavedLocations();
-  }, []);
 
   return (
     <>
-    <div className="absolute left-8  bg-white top-2 overflow-y-auto">
-      <div className="">
-        {/* <button
-          onClick={onClose} // Close the overlay when clicked
-          className="text-red-500 mb-4 right-0"
-        >
-          Close
-        </button> */}
-        <h2 className="text-xl font-bold mb-4">Saved Locations </h2>
+      <div className="absolute left-0 bg-white top-0 -z-10 overflow-y-auto w-96 p-4">
+        <div className="relative">
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+          >
+            ✕ {/* You can replace this with an SVG icon if preferred */}
+          </button>
+          
+          <h2 className="text-xl font-bold mb-4">Saved Locations</h2>
 
-        <div className="grid grid-cols-1 space-y-4 w-80">
+          <div className="grid grid-cols-1 space-y-4">
             {savedLocations.length > 0 ? (
               savedLocations.map((location, index) => (
                 <div key={index} className="flex flex-row p-4 gap-4 bg-gray-100 rounded-lg">
-                  <img className="w-24 h-24 rounded-lg" src={location.image} />
+                  <img className="w-24 h-24 rounded-lg" src={location.image} alt="Location Thumbnail" />
 
-                  <div className="flex flex-col">
+                  <div className="flex flex-col flex-grow">
                     <h3 className="font-semibold text-xl">{location.locationName}</h3>
-                    <p className="text-base"> {location.region}</p>
+                    <p className="text-base -mt-1">{location.region}</p>
 
-                    <div className="flex flex-col pt-3">
-
+                    <div className="flex flex-row pt-5 space-x-2">
+                      {/* View Button */}
+                      <button
+                        onClick={() => handleViewDetails(location.coordinates.latitude, location.coordinates.longitude)}
+                        className="px-6 py-1 text-xs text-black border-1 border-gray-900 rounded-lg hover:bg-gray-900 hover:text-white"
+                      >
+                        View
+                      </button>
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleUnsave(location._id)}
+                        className="px-6 py-1 text-xs  text-white bg-red-500 rounded-lg hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-
                 </div>
               ))
             ) : (
               <p>No saved locations found.</p>
             )}
           </div>
+        </div>
       </div>
-    </div>
     </>
   );
 }

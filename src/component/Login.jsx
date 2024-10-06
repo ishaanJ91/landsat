@@ -51,7 +51,7 @@ export default function LoginPage() {
   }, []);
 
   if (redirect) {
-    return <Navigate to="/dashboard" />; // Redirect to dashboard after login
+    return <Navigate to="/dashboard/target-location" />; // Redirect to dashboard after login
   }
 
   return (

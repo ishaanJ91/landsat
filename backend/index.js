@@ -58,12 +58,11 @@ const placeSchema = new mongoose.Schema({
   ndviGrid: [
     {
       index: Number,
-      ndvi: Number
-    }
+      ndvi: Number,
+    },
   ], // Add ndviGrid to store NDVI data
   dateSaved: { type: Date, default: Date.now },
 });
-
 
 const User = mongoose.model("User", userSchema);
 const Place = mongoose.model("Place", placeSchema);
@@ -82,7 +81,6 @@ async function findOrCreateUser(email, name) {
     throw error;
   }
 }
-
 
 const nodemailer = require("nodemailer");
 
@@ -315,33 +313,46 @@ app.get("/earth-engine-data", (req, res) => {
 
 // Overpass Prediction
 
-
 // Julian to Gregorian conversion function
 // Function to convert Julian Date to Gregorian Date
 function julianToGregorian(julianDate) {
-  // Split the Julian date into day and time components
   const [julianDay, time] = julianDate.split("-");
-
-  // Check if the day part is a valid number
   const dayOfYear = parseInt(julianDay, 10);
-
   if (isNaN(dayOfYear)) {
     throw new Error("Invalid Julian day format");
   }
 
-  // Create a new Date object with the given year and day of the year
-  const year = new Date().getFullYear(); // Assume the current year for simplicity
-  const gregorianDate = new Date(year, 0); // Start at the beginning of the year (January 1st)
+  const year = new Date().getFullYear();
+  const gregorianDate = new Date(year, 0);
+  // Start at the beginning of the year (January 1st)
   gregorianDate.setDate(dayOfYear); // Set the day of the year
 
-  // If there's a time component, append it to the date
   let isoString = gregorianDate.toISOString().split("T")[0]; // Get YYYY-MM-DD format
   if (time) {
-    isoString += ` ${time}`; // Append the time
+    isoString += ` ${time}`; // Append the time if available
   }
 
   return isoString;
 }
+
+// Endpoint to convert lat/lng to path/row
+app.post("/convert-latlng-to-pathrow", async (req, res) => {
+  const { latitude, longitude } = req.body;
+
+  if (!latitude || !longitude) {
+    return res.status(400).json({ error: "Missing latitude or longitude" });
+  }
+
+  const result = await getPathRowFromLatLng(latitude, longitude);
+  console.log(result);
+  if (result) {
+    res.json(result);
+  } else {
+    res
+      .status(500)
+      .json({ error: "Failed to convert coordinates to Path/Row." });
+  }
+});
 
 // Overpass Prediction API endpoint
 app.get("/landsat-overpass", async (req, res) => {
@@ -397,7 +408,7 @@ app.post("/save", async (req, res) => {
           "Region",
           "NDVI Image Link",
           "Download Date",
-          "Download Time"
+          "Download Time",
         ];
         const locationRows = [
           [
@@ -408,18 +419,18 @@ app.post("/save", async (req, res) => {
             image || "Unavailable",
             new Date().toLocaleDateString("en-GB"),
             new Date().toLocaleTimeString(),
-          ]
+          ],
         ];
 
         const ndviHeaders = ["Grid Index", "NDVI Value"];
         const ndviRows = ndviGrid.map((pixel, index) => [
           `Cell ${index + 1}`,
-          pixel.ndvi.toFixed(2)
+          pixel.ndvi.toFixed(2),
         ]);
 
         // Create CSV content
         const locationCsvContent = [
-          locationHeaders.join(","), 
+          locationHeaders.join(","),
           ...locationRows.map((row) => row.join(",")),
         ].join("\n");
 
@@ -429,16 +440,18 @@ app.post("/save", async (req, res) => {
         ].join("\n");
 
         const fullCsvContent = `${locationCsvContent}\n\nNDVI Grid Values\n${ndviCsvContent}`;
-        
+
         // Respond with success, placeDoc, and CSV content
-        return res.status(201).json({ 
-          message: "Location saved successfully!", 
+        return res.status(201).json({
+          message: "Location saved successfully!",
           placeDoc,
           csv: fullCsvContent, // Provide the CSV content for download
         });
       } catch (dbError) {
         // If there's an error while saving to the database, return a 500 status code
-        return res.status(500).json({ message: "Error saving location", error: dbError });
+        return res
+          .status(500)
+          .json({ message: "Error saving location", error: dbError });
       }
     });
   } catch (error) {
@@ -449,7 +462,7 @@ app.post("/save", async (req, res) => {
 
 app.get("/saved-locations", async (req, res) => {
   const { token } = req.cookies;
-  
+
   try {
     // Verify JWT token
     jwt.verify(token, jwtSecret, {}, async (err, userData) => {
@@ -462,7 +475,9 @@ app.get("/saved-locations", async (req, res) => {
         const savedLocations = await Place.find({ user: userData.id });
         return res.status(200).json(savedLocations);
       } catch (dbError) {
-        return res.status(500).json({ message: "Error fetching locations", error: dbError });
+        return res
+          .status(500)
+          .json({ message: "Error fetching locations", error: dbError });
       }
     });
   } catch (error) {
@@ -470,9 +485,83 @@ app.get("/saved-locations", async (req, res) => {
   }
 });
 
+app.delete("/unsave", async (req, res) => {
+  const { token } = req.cookies;
+  const { lat, lng } = req.query; // Get lat and lng from query parameters
 
+  try {
+    // Verify JWT token
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+      if (err) {
+        return res.status(403).json({ message: "Invalid token" });
+      }
 
-// NVDI 
+      try {
+        // Find and delete the place document for the authenticated user based on lat/lng
+        const deletedLocation = await Place.findOneAndDelete({
+          user: userData.id,
+          "coordinates.latitude": lat,
+          "coordinates.longitude": lng,
+        });
+
+        if (!deletedLocation) {
+          return res.status(404).json({ message: "Location not found" });
+        }
+
+        // Respond with a success message and deleted location
+        res
+          .status(200)
+          .json({ message: "Location successfully unsaved", deletedLocation });
+      } catch (dbError) {
+        console.error("Error unsaving location:", dbError);
+        res
+          .status(500)
+          .json({ message: "Error unsaving location", error: dbError });
+      }
+    });
+  } catch (error) {
+    console.error("Unexpected server error:", error);
+    res.status(500).json({ message: "Unexpected server error", error });
+  }
+});
+
+const toggleSaveLocation = async (ev) => {
+  ev.preventDefault();
+
+  try {
+    if (isLocationSaved) {
+      // Unsave the location
+      await axios.delete("/unsave", {
+        params: { lat: inputLat, lng: inputLng },
+      });
+      setIsLocationSaved(false);
+    } else {
+      // Save the location
+      const ndviGridWithColors = ndviGrid.map((pixel) => ({
+        ndvi: pixel.ndvi.toFixed(2),
+        rgb: getNDVIColor(pixel.ndvi),
+      }));
+
+      const locationData = {
+        image: replacedUrl,
+        locationName: addressComponents.state || "Unavailable",
+        region: addressComponents.country || "Unavailable",
+        coordinates: {
+          latitude: inputLat,
+          longitude: inputLng,
+        },
+        ndviGrid: ndviGridWithColors,
+      };
+
+      await axios.post("/save", locationData);
+      setIsLocationSaved(true);
+    }
+  } catch (error) {
+    console.error("Error toggling save state:", error);
+  }
+};
+
+// NVDI
 
 // Convert lat/lng to path/row
 const getPathRowFromLatLng = async (latitude, longitude) => {
@@ -635,24 +724,47 @@ const fetchOverpassPrediction = async (year, month, day, path, row) => {
 
 // Julian to Gregorian conversion function
 function julianToGregorian(julianDate) {
+  // Split the Julian date into day and time components
   const [julianDay, time] = julianDate.split("-");
+
+  // Check if the day part is a valid number
   const dayOfYear = parseInt(julianDay, 10);
+
   if (isNaN(dayOfYear)) {
     throw new Error("Invalid Julian day format");
   }
 
-  const year = new Date().getFullYear();
-  const gregorianDate = new Date(year, 0);
-  // Start at the beginning of the year (January 1st)
+  // Create a new Date object with the given year and day of the year
+  const year = new Date().getFullYear(); // Assume the current year for simplicity
+  const gregorianDate = new Date(year, 0); // Start at the beginning of the year (January 1st)
   gregorianDate.setDate(dayOfYear); // Set the day of the year
 
+  // If there's a time component, append it to the date
   let isoString = gregorianDate.toISOString().split("T")[0]; // Get YYYY-MM-DD format
   if (time) {
-    isoString += ` ${time}`; // Append the time if available
+    isoString += ` ${time}`; // Append the time
   }
 
   return isoString;
 }
+
+// Overpass Prediction API endpoint
+app.get("/landsat-overpass", async (req, res) => {
+  const { year, month, day, path, row } = req.query;
+
+  if (!year || !month || !day || !path || !row) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const predictionResult = await fetchOverpassPrediction(
+    year,
+    month,
+    day,
+    path,
+    row
+  );
+  res.json(predictionResult);
+});
 
 // Endpoint to convert lat/lng to path/row
 app.post("/convert-latlng-to-pathrow", async (req, res) => {
@@ -670,6 +782,149 @@ app.post("/convert-latlng-to-pathrow", async (req, res) => {
     res
       .status(500)
       .json({ error: "Failed to convert coordinates to Path/Row." });
+  }
+});
+
+app.get("/ndvi-images", async (req, res) => {
+  const { startDate, endDate, latitude, longitude, zoomLevel } = req.query;
+
+  if (!startDate || !endDate || !latitude || !longitude) {
+    return res.status(400).json({ error: "Missing parameters" });
+  }
+
+  try {
+    // Define the point location using latitude and longitude
+    const point = ee.Geometry.Point([
+      parseFloat(longitude),
+      parseFloat(latitude),
+    ]);
+
+    // Define date range for filtering the image collection
+    const start = ee.Date(startDate);
+    const end = ee.Date(endDate);
+
+    // Set the buffer size based on zoom level input (default 1000 meters)
+    const bufferDistance = zoomLevel ? parseFloat(zoomLevel) * 1000 : 1000; // Default zoom is 1000 meters
+
+    // Filter Landsat 8 surface reflectance image collection by date and bounds
+    const imageCollection = ee
+      .ImageCollection("LANDSAT/LC08/C02/T1_L2")
+      .filterBounds(point)
+      .filterDate(start, end)
+      .map((image) => {
+        // Calculate NDVI
+        const ndvi = image
+          .normalizedDifference(["SR_B5", "SR_B4"]) // Near Infrared (B5) and Red (B4)
+          .rename("NDVI");
+        return image.addBands(ndvi);
+      });
+
+    // Fetch the list of NDVI images and dates
+    const imageList = imageCollection.toList(500); // Get up to 500 images
+    const imageCount = imageList.size().getInfo();
+
+    const ndviPalette = ["#FFA500", "#FFFF00", "#ADFF2F"];
+
+    // Prepare results
+    let results = [];
+    for (let i = 0; i < imageCount; i++) {
+      const image = ee.Image(imageList.get(i));
+      const date = image.date().format("YYYY-MM-dd").getInfo();
+      const ndviImageUrl = image.getThumbURL({
+        dimensions: "400x400", // Image size
+        region: point.buffer(bufferDistance).bounds().getInfo(), // Dynamic buffer based on zoom level
+        min: 0.2,
+        max: 1,
+        bands: ["NDVI"],
+        palette: ndviPalette, // Palette for NDVI values
+      });
+
+      const ndviValue = image
+        .reduceRegion({
+          reducer: ee.Reducer.mean(),
+          geometry: point,
+          scale: 30, // 30 meters per pixel
+        })
+        .get("NDVI")
+        .getInfo();
+
+      results.push({
+        date,
+        imageUrl: ndviImageUrl,
+        ndviValue,
+      });
+    }
+
+    // Return results as JSON
+    res.json({ ndviImages: results });
+  } catch (err) {
+    console.error("Error fetching NDVI images:", err);
+    res.status(500).json({ error: "Failed to fetch NDVI images." });
+  }
+});
+
+app.get("/earth-engine-seasonal-ndvi", async (req, res) => {
+  const { longitude, latitude } = req.query;
+
+  if (!longitude || !latitude) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const targetPoint = ee.Geometry.Point([
+      parseFloat(longitude),
+      parseFloat(latitude),
+    ]);
+
+    // Define date ranges for each season
+    const seasons = [
+      { name: "Spring", start: "2024-03-01", end: "2024-05-31" },
+      { name: "Summer", start: "2024-06-01", end: "2024-08-31" },
+      { name: "Fall", start: "2024-09-01", end: "2024-11-30" },
+      { name: "Winter", start: "2023-12-01", end: "2024-02-28" },
+    ];
+
+    let seasonalResults = [];
+
+    await Promise.all(
+      seasons.map(async (season) => {
+        const landsatSR = ee
+          .ImageCollection("LANDSAT/LC08/C02/T1_L2")
+          .filterDate(season.start, season.end)
+          .filterBounds(targetPoint)
+          .select(["SR_B4", "SR_B5"]); // Select the red and NIR bands
+
+        // Calculate NDVI
+        const ndvi = landsatSR
+          .map((image) =>
+            image.normalizedDifference(["SR_B5", "SR_B4"]).rename("NDVI")
+          )
+          .mean(); // Mean NDVI for the season
+
+        // Get NDVI value
+        const ndviValue = await ndvi
+          .reduceRegion({
+            reducer: ee.Reducer.mean(),
+            geometry: targetPoint,
+            scale: 30,
+            maxPixels: 1e9,
+          })
+          .get("NDVI")
+          .getInfo();
+
+        seasonalResults.push({
+          season: season.name,
+          ndvi: ndviValue,
+        });
+
+        console.log(`Season: ${season.name}, NDVI: ${ndviValue}`);
+      })
+    );
+
+    res.json({ seasonalResults });
+  } catch (error) {
+    console.error("Error retrieving Earth Engine data:", error);
+    res.status(500).json({ error: "Failed to retrieve NDVI data" });
   }
 });
 
@@ -772,6 +1027,71 @@ app.post("/predict-overpass", async (req, res) => {
     return res
       .status(500)
       .json({ error: "Failed to retrieve Path/Row for the location." });
+  }
+});
+
+app.get("/earth-engine-seasonal-ndvi", async (req, res) => {
+  const { longitude, latitude } = req.query;
+
+  if (!longitude || !latitude) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const targetPoint = ee.Geometry.Point([
+      parseFloat(longitude),
+      parseFloat(latitude),
+    ]);
+
+    // Define date ranges for each season
+    const seasons = [
+      { name: "Spring", start: "2024-03-01", end: "2024-05-31" },
+      { name: "Summer", start: "2024-06-01", end: "2024-08-31" },
+      { name: "Fall", start: "2024-09-01", end: "2024-11-30" },
+      { name: "Winter", start: "2023-12-01", end: "2024-02-28" },
+    ];
+
+    let seasonalResults = [];
+
+    await Promise.all(
+      seasons.map(async (season) => {
+        const landsatSR = ee
+          .ImageCollection("LANDSAT/LC08/C02/T1_L2")
+          .filterDate(season.start, season.end)
+          .filterBounds(targetPoint)
+          .select(["SR_B4", "SR_B5"]); // Select the red and NIR bands
+
+        // Calculate NDVI
+        const ndvi = landsatSR
+          .map((image) =>
+            image.normalizedDifference(["SR_B5", "SR_B4"]).rename("NDVI")
+          )
+          .mean(); // Mean NDVI for the season
+
+        // Get NDVI value
+        const ndviValue = await ndvi
+          .reduceRegion({
+            reducer: ee.Reducer.mean(),
+            geometry: targetPoint,
+            scale: 30,
+            maxPixels: 1e9,
+          })
+          .get("NDVI")
+          .getInfo();
+
+        seasonalResults.push({
+          season: season.name,
+          ndvi: ndviValue,
+        });
+
+        console.log(`Season: ${season.name}, NDVI: ${ndviValue}`);
+      })
+    );
+
+    res.json({ seasonalResults });
+  } catch (error) {
+    console.error("Error retrieving Earth Engine data:", error);
+    res.status(500).json({ error: "Failed to retrieve NDVI data" });
   }
 });
 

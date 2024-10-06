@@ -5,6 +5,7 @@ import maps from "../images/maps.webp";
 import srmaps from "../images/sr_map.png";
 import { Link } from "react-router-dom";
 import Header from "./Header";
+import World from "./World";
 
 export default function HomePage() {
   const [expanded, setExpanded] = useState(false);
@@ -35,11 +36,11 @@ export default function HomePage() {
       />
       <section className="mt-28 bg-black z-10 sm:pt-16 relative overflow-hidden">
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-          <div className="px-3 mx-auto text-left">
-            <h1 className="text-xl text-gray-400 font-inter">
+          <div className="px-3 mx-auto ml-0 text-left max-w-fit">
+            <h1 className="text-xl z-50 text-gray-400 w-fit font-inter">
               Explore the Earth with Landsat Data
             </h1>
-            <p className="mt-2 max-w-2xl text-5xl font-bold leading-tight text-gray-100 sm:leading-tight sm:text-5xl lg:text-6xl lg:leading-tight font-pj">
+            <p className="mt-2 z-50 max-w-2xl text-5xl font-bold leading-tight text-gray-100 sm:leading-tight sm:text-5xl lg:text-6xl lg:leading-tight font-pj">
               Discover insights from Landsat
               <span className="relative inline-flex sm:inline">
                 <span className="bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] blur-lg filter opacity-30 w-full h-full absolute inset-0"></span>
@@ -59,9 +60,11 @@ export default function HomePage() {
             </div>
 
             {/* Earth image container */}
-            <div className="absolute -top-48 right-0 w-[140vw] overflow-hidden -z-1">
-              <img src={earth} className="w-[200%] h-auto translate-x-[50%]" />
-            </div>
+          </div>
+
+          <div className="absolute -top-20 left-96 w-[140vw] -z-10 overflow-hidden -z-1">
+            {/* <img src={earth} className="w-[200%] h-auto translate-x-[50%]" /> */}
+            <World />
           </div>
 
           <div className="flex flex-col py-6 my-20 px-3 text-gray-400">
@@ -160,18 +163,20 @@ export default function HomePage() {
             Get Started <br /> Now
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-2 sm:grid-cols-1 justify-center items-end gap-5">
-            <button
+            <Link
+              to="/register"
               type="button"
               className="w-full md:w-auto text-lg border-2 border-white py-2 px-5 rounded-lg font-medium text-gray-100 transition-all duration-200 hover:text-black hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-50"
             >
               Create an Account
-            </button>
-            <button
+            </Link>
+            <Link
+              to="/login"
               type="button"
-              className="w-full md:w-auto text-lg border-2 border-white py-2 px-5 rounded-lg font-medium text-gray-100 transition-all duration-200  hover:text-black hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-50"
+              className="w-full text-center md:w-auto text-lg border-2 border-white py-2 px-5 rounded-lg font-medium text-gray-100 transition-all duration-200  hover:text-black hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-50"
             >
               Login
-            </button>
+            </Link>
           </div>
         </div>
       </section>

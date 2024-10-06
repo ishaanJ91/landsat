@@ -23,7 +23,7 @@ export default function Register() {
         setName("");
         setEmail("");
         setPassword("");
-        navigate("/dashboard");
+        navigate("/dashboard/target-location");
       })
       .catch((error) => {
         console.error("Error during registration:", error);

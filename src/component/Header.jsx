@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import logo from "../images/logo.png";
 
 export default function Header() {
   const [expanded, setExpanded] = useState(false);
@@ -62,80 +63,42 @@ export default function Header() {
               : "bg-transparent"
           }`}
         >
-          <div className="mx-auto px-14 flex justify-between items-center">
-            <div className="flex-shrink-0">
+          <div className="mx-auto px-20 flex justify-between items-center">
+            <div className="flex items-center">
               <a
                 href="/"
                 title="Landsat Tracker"
-                className="flex rounded outline-none focus:ring-1 focus:ring-gray-100 focus:ring-offset-2"
+                className="flex items-center rounded outline-none focus:ring-1 focus:ring-gray-100 focus:ring-offset-2"
               >
-                <h1 className="text-2xl font-bold text-gray-100 font-pj">
-                  Landsat Tracker
+                <img
+                  src={logo}
+                  alt="LandStat Logo"
+                  className="w-12 h-12 mr-6"
+                />
+                <h1 className="text-4xl font-bold text-gray-100 font-pj">
+                  LandStat
                 </h1>
               </a>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex lg:space-x-10 items-center">
-              <a
-                href="#"
-                title="Home"
-                className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-              >
-                Home
-              </a>
-              <a
-                href="#"
-                title="About"
-                className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-              >
-                About
-              </a>
+            {/* Conditionally Render Signup or Profile with User's Name */}
+            <div className="hidden lg:flex gap-5 items-center">
               <Link
-                to={"/target-location"}
-                title="Data"
-                className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
+                to="/register"
+                type="button"
+                className="text-base border-2 border-white py-1 px-4 rounded-lg font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
               >
-                Data
+                Signup
               </Link>
 
-              {/* Conditionally Render Signup or Profile with User's Name */}
-              {isLoggedIn ? (
-                <div className="relative">
-                  <button
-                    className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-                    onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  >
-                    {userName} {/* Show the user's name */}
-                  </button>
-
-                  {/* Profile Dropdown */}
-                  {showProfileDropdown && (
-                    <div className="absolute right-0 mt-2 py-2 w-48 bg-white rounded-lg shadow-xl">
-                      <Link
-                        to="/dashboard"
-                        className="block px-4 py-2 text-gray-800 hover:bg-gray-200"
-                      >
-                        Dashboard
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-gray-800 hover:bg-gray-200"
-                      >
-                        Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link
-                  to="/register"
-                  type="button"
-                  className="text-base border-2 border-white py-1 px-4 rounded-lg font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
-                >
-                  Signup
-                </Link>
-              )}
+              <Link
+                to="/login"
+                type="button"
+                className="text-base border-2 border-white py-1 px-4 rounded-lg font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
+              >
+                Login
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
