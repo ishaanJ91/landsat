@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from "react";
 import nasaLogo from "../images/nasa.png";
+import asi from "../images/asi.png";
+import isro from "../images/isro.png";
+import nasa from "../images/nasa.webp";
+import jaxa from "../images/jaxa.png";
 import earth from "../images/earth.png";
 import maps from "../images/maps.webp";
 import srmaps from "../images/sr_map.png";
@@ -38,14 +42,10 @@ export default function HomePage() {
         <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <div className="px-3 mx-auto ml-0 text-left max-w-fit">
             <h1 className="text-xl z-50 text-gray-400 w-fit font-inter">
-              Explore the Earth with Landsat Data
+              Challenge Name
             </h1>
             <p className="mt-2 z-50 max-w-2xl text-5xl font-bold leading-tight text-gray-100 sm:leading-tight sm:text-5xl lg:text-6xl lg:leading-tight font-pj">
-              Discover insights from Landsat
-              <span className="relative inline-flex sm:inline">
-                <span className="bg-gradient-to-r from-[#44BCFF] via-[#FF44EC] to-[#FF675E] blur-lg filter opacity-30 w-full h-full absolute inset-0"></span>
-                <span className="relative"> Satellite </span>
-              </span>
+              Landsat Reflectance Data: On the Fly and at Your Fingertips
             </p>
 
             <div className="sm:items-center sm:justify-left sm:px-0 sm:space-x-5 sm:flex mt-8">
@@ -72,11 +72,10 @@ export default function HomePage() {
               Trusted by the world’s leading organizations ↘︎
             </p>
 
-            <div className="flex flex-row gap-16">
-              <img src={nasaLogo} className="size-28 opacity-60" />
-              <img src={nasaLogo} className="size-28 opacity-60" />
-              <img src={nasaLogo} className="size-28 opacity-60" />
-              <img src={nasaLogo} className="size-28 opacity-60" />
+            <div className="flex flex-row mt-6 gap-16">
+              <img src={nasaLogo} className="size-28 " />
+              <img src={isro} className="grayscale size-28 " />
+              <img src={jaxa} className="grayscale size-28 " />
             </div>
           </div>
         </div>

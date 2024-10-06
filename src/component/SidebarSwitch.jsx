@@ -93,7 +93,7 @@ export default function SidebarSwitcher({
                       backgroundColor: getNDVIColor(pixel.ndvi),
                     }}
                   >
-                    <span className="text-xs text-black">
+                    <span className="text-xl text-black">
                       {pixel.ndvi.toFixed(2)}
                     </span>
                   </div>
