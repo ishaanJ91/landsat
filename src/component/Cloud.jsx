@@ -15,7 +15,7 @@ const Cloud = ({ lat, lon, apiKey }) => {
         if (response.ok) {
           const data = await response.json();
           // Extract cloud coverage percentage
-          const cloudPercentage = data.clouds?.all || "No data";
+          const cloudPercentage = data.clouds?.all || "0";
           setCloudCoverage(cloudPercentage);
           console.log(`Cloud coverage at coordinates (${lat}, ${lon}): ${cloudPercentage}%`);
         } else {
@@ -30,15 +30,11 @@ const Cloud = ({ lat, lon, apiKey }) => {
   }, [lat, lon, apiKey]); // Ensure the effect updates when props change
 
   return (
-    <div>
-      {error ? (
-        <p>{error}</p>
-      ) : cloudCoverage !== null ? (
-        <p>Cloud coverage {cloudCoverage}%</p>
-      ) : (
-        <p>Loading cloud coverage data...</p>
-      )}
+    <div className="flex flex-row text-base justify-between items-center w-full mt-2">
+      <p className="text-gray-800 font-medium">Cloud Coverage</p>
+      <p className="text-gray-800">{cloudCoverage}%</p>
     </div>
+
   );
 };
 

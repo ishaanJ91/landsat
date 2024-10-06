@@ -1,4 +1,3 @@
-// SurfaceTemp.js
 import React, { useState, useEffect } from 'react';
 
 const SurfaceTemp = ({ lat, lon, apiKey }) => {
@@ -19,8 +18,8 @@ const SurfaceTemp = ({ lat, lon, apiKey }) => {
           const tempKelvin = data.main?.temp;
 
           if (tempKelvin != null) {
-            const tempCelsius = tempKelvin - 273.15;
-            setSurfaceTemp(tempCelsius.toFixed(2)); // Round to 2 decimal places
+            const tempCelsius = Math.round(tempKelvin - 273.15); // Convert to Celsius and round to nearest whole number
+            setSurfaceTemp(tempCelsius); 
             console.log(
               `Surface temperature at coordinates (${lat}, ${lon}): ${tempCelsius}°C`
             );
@@ -41,16 +40,9 @@ const SurfaceTemp = ({ lat, lon, apiKey }) => {
   }, [lat, lon, apiKey]); // Ensure the effect updates when props change
 
   return (
-    <div>
-      {error ? (
-        <p>{error}</p>
-      ) : surfaceTemp !== null ? (
-        <p>
-          Surface temperature {surfaceTemp}°C
-        </p>
-      ) : (
-        <p>Loading surface temperature data...</p>
-      )}
+    <div className="flex flex-row text-base justify-between items-center w-full mt-2">
+      <p className="text-gray-800 font-medium">Surface Temperature</p>
+      <p className="text-gray-800">{surfaceTemp} <sup>°C</sup></p>
     </div>
   );
 };

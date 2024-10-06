@@ -219,8 +219,8 @@ const customMapStyle = [
 ];
 
 const defaultCenter = {
-  lat: 37.7749,
-  lng: -122.4194, // Default to San Francisco
+  lat: 53.3498,
+  lng: -6.2603, // Default to San Francisco
 };
 
 function latLngToTileCoords(lat, lng, zoom) {
@@ -258,7 +258,7 @@ function MyMap() {
     const day = dateObj.getDate();
     const month = dateObj.toLocaleString("default", { month: "long" });
     const year = dateObj.getFullYear();
-  
+
     // Get the appropriate suffix for the day
     const daySuffix =
       day % 10 === 1 && day !== 11
@@ -268,7 +268,7 @@ function MyMap() {
         : day % 10 === 3 && day !== 13
         ? "rd"
         : "th";
-  
+
     return `${day}${daySuffix} ${month}, ${year}`;
   };
 
@@ -364,12 +364,13 @@ function MyMap() {
 
       // Fetch data from the backend
       const response = await axios.get(url);
-      const formattedDate = formatDateTime(response.data.date);
-
+      const formattedDate = formatDateTime(
+        response.data.date,
+        response.data.time
+      );
 
       setOverpassData({
-        date: formattedDate, // Use formatted date here
-        time: response.data.time, // Or add time formatting if required
+        date: formattedDate,
       });
     } catch (error) {
       console.error("Error fetching overpass data:", error);
@@ -409,7 +410,6 @@ function MyMap() {
       setError("Failed to fetch overpass data");
     }
   };
-  
 
   const convertLatLngToPathRow = async (lat, lng) => {
     try {
@@ -501,7 +501,7 @@ function MyMap() {
   const reverseGeocode = (lat, lng) => {
     const geocoder = new window.google.maps.Geocoder();
     const location = { lat, lng };
-  
+
     geocoder.geocode({ location }, (results, status) => {
       if (status === "OK" && results[0]) {
         // Extract relevant address components (e.g., country, state, region)
@@ -520,18 +520,21 @@ function MyMap() {
           },
           {}
         );
-  
+
         // Update the state with address details
-        setAddressComponents(addressDetails); 
+        setAddressComponents(addressDetails);
       } else {
         console.error("Geocode error:", status);
       }
     });
   };
-  
 
   const replacedUrl =
     tileUrl && marker && replaceXYZ(tileUrl, marker.lat, marker.lng, zoomLevel);
+
+  useEffect(() => {
+    console.log("Address Components:", addressComponents);
+  }, [addressComponents]);
 
   return (
     <div
@@ -541,8 +544,7 @@ function MyMap() {
     >
       <LoadScript
         googleMapsApiKey="AIzaSyCdpN3Sn0HZnS31DBaIgdk4DOToBvDQYUk"
-        // AIzaSyCdpN3Sn0HZnS31DBaIgdk4DOToBvDQYUk
-        libraries={libraries} 
+        libraries={libraries}
         onLoad={() => console.log("Google Maps API Loaded Successfully")}
         onError={(error) => console.error("Google Maps API Error:", error)}
       >
