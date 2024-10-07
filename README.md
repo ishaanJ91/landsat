@@ -7,7 +7,7 @@ LandStat is an interactive web application designed to provide users with vegeta
 - 🔗 [Core Technologies & APIs](#core-technologies--apis)
 - 🌟 [Key Features](#key-features)
 - 💻 [How to Use](#how-to-use)
-- 📷 [Screenshots](#screenshots)
+- 📷 [Preview](#preview)
 - 🚀 [Planned Enhancements](#planned-enhancements)
 - 🤝 [Contributing to LandStat](#contributing-to-landstat)
 - 📄 [License](#license)
@@ -71,11 +71,12 @@ LandStat's functionalities are powered by a combination of APIs and technologies
   
 - **Save & Share Insights**: Use the "Save", "Download", and "Share" features to retain or distribute visualizations of the NDVI data for future analysis or sharing with peers.
 
-## 📷 Video
+## 📷 Preview
+[Selecting Location](./LandStat1.mov)<br>
+[Download and Share Feature](./LandStat2.mov)<br>
+[Graph and Past Data](./LandStat3.mov)
 
 
-
-![LandStat NDVI Display](./path/to/screenshot.png)
 
 ## 🚀 Planned Enhancements
 
@@ -87,13 +88,15 @@ LandStat's functionalities are powered by a combination of APIs and technologies
 
 ## 🤝 Contributing to LandStat
 
-We welcome and appreciate contributions from the community! If you are interested in contributing to the project, please follow these steps:
+Contributions are welcome! If you'd like to improve the project, please:
 
-1. **Fork the Repository**: Click the "Fork" button to create your copy of the LandStat repo.
-2. **Create a New Branch**: Set up a new branch for your feature (`git checkout -b feature-branch`).
-3. **Make Changes & Commit**: Implement your changes and commit them to the branch (`git commit -m 'Add new feature'`).
-4. **Push to Your Branch**: Push the branch to your GitHub repository (`git push origin feature-branch`).
-5. **Submit a Pull Request**: Open a pull request to merge your changes into the main repository.
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature-branch`).
+3. Make your changes and commit them (`git commit -m 'Add feature'`).
+4. Push the branch (`git push origin feature-branch`).
+5. Submit a pull request. 
+
+Your contributions will help us make LandStat better!
 
 ## 📄 License
 
