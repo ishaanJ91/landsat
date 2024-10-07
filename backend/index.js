@@ -4,8 +4,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const ee = require("@google/earthengine"); // Import Google Earth Engine
-const axios = require("axios"); // Import Axios for overpass prediction
+const ee = require("@google/earthengine");
+const axios = require("axios");
 
 require("dotenv").config();
 
@@ -14,7 +14,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
 // Load Earth Engine private key
-const privateKey = require("/Users/macncheese/Desktop/trial/landsat/wise-diagram-437711-b1-5998d0c3c8fe.json");
+const privateKey = require("/Users/macncheese/Desktop/trial/landsat/wise-diagram-437711-b1-6e560983f148.json");
 
 // Authenticate Earth Engine using the service account
 ee.data.authenticateViaPrivateKey(privateKey, () => {
@@ -23,7 +23,6 @@ ee.data.authenticateViaPrivateKey(privateKey, () => {
   });
 });
 
-// Middlewares
 app.use(express.json());
 app.use(cookieParser());
 
@@ -314,7 +313,6 @@ app.get("/earth-engine-data", (req, res) => {
 // Overpass Prediction
 
 // Julian to Gregorian conversion function
-// Function to convert Julian Date to Gregorian Date
 function julianToGregorian(julianDate) {
   const [julianDay, time] = julianDate.split("-");
   const dayOfYear = parseInt(julianDay, 10);

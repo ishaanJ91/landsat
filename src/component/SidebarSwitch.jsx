@@ -214,12 +214,12 @@ export default function SidebarSwitcher({
             <Cloud
               lat={inputLat}
               lon={inputLng}
-              apiKey={"5576ca2996ff7133deae5519f72b8963"}
+              apiKey={"YOUR_API_KEY"} // Replace with your actual API key
             />
             <SurfaceTemp
               lat={inputLat}
               lon={inputLng}
-              apiKey={"5576ca2996ff7133deae5519f72b8963"} // Replace with your actual API key
+              apiKey={"YOUR_API_KEY"} // Replace with your actual API key
             />
           </div>
         </div>
