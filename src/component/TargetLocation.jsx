@@ -428,7 +428,7 @@ function MyMap() {
   // Call this function when a user clicks on the map or enters lat/lng manually
   const handleLocationSelect = async (lat, lng) => {
     const pathRow = await convertLatLngToPathRow(lat, lng);
-    console.log("Converted Path/Row:", pathRow); // Log the conversion to the console
+    console.log("Converted Path/Row: ", pathRow); // Log the conversion to the console
   };
 
   const handleMapClick = async (event) => {
