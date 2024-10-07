@@ -7,11 +7,9 @@ import {
   Autocomplete,
 } from "@react-google-maps/api";
 import axios from "axios";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css"; // Import DatePicker styles
 import MapSidebar from "./MapSidebar";
 import Coordinates from "./Coordinates";
-import html2canvas from "html2canvas";
 import { useLocation, useNavigate } from "react-router-dom"; // Import useLocation & useHistory
 
 // Move the libraries array outside the component to prevent reloading
@@ -220,7 +218,7 @@ const customMapStyle = [
 
 const defaultCenter = {
   lat: 53.3498,
-  lng: -6.2603, // Default to San Francisco
+  lng: -6.2603,
 };
 
 function latLngToTileCoords(lat, lng, zoom) {
@@ -543,7 +541,7 @@ function MyMap() {
       style={{ position: "relative" }}
     >
       <LoadScript
-        googleMapsApiKey="AIzaSyCdpN3Sn0HZnS31DBaIgdk4DOToBvDQYUk"
+        googleMapsApiKey="YOUR_API_KEY"
         libraries={libraries}
         onLoad={() => console.log("Google Maps API Loaded Successfully")}
         onError={(error) => console.error("Google Maps API Error:", error)}

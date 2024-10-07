@@ -49,8 +49,7 @@ export default function Register() {
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
-      client_id:
-        "981598769871-qi14dkp4jd9bcrqrp7u8jaknpf0tbp6f.apps.googleusercontent.com",
+      client_id: "CLIENT_ID",
       callback: handleGoogleRegisterSuccess,
     });
     google.accounts.id.renderButton(document.getElementById("google-signin"), {

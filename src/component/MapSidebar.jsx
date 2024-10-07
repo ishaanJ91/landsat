@@ -85,6 +85,8 @@ export default function MapSidebar({
       handleCheckOverpass();
 
       // Create a debounce function for reverseGeocode
+      reverseGeocode(parseFloat(inputLat), parseFloat(inputLng));
+
       // const timer = setTimeout(() => {
       //   reverseGeocode(parseFloat(inputLat), parseFloat(inputLng));
       // }, DEBOUNCE_DELAY);
