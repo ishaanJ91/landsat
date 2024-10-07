@@ -14,7 +14,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
 // Load Earth Engine private key
-const privateKey = require("/Users/macncheese/Desktop/trial/landsat/wise-diagram-437711-b1-6e560983f148.json");
+const privateKey = require("PRIVATE_KEY");
 
 // Authenticate Earth Engine using the service account
 ee.data.authenticateViaPrivateKey(privateKey, () => {
@@ -313,6 +313,7 @@ app.get("/earth-engine-data", (req, res) => {
 // Overpass Prediction
 
 // Julian to Gregorian conversion function
+// Function to convert Julian Date to Gregorian Date
 function julianToGregorian(julianDate) {
   const [julianDay, time] = julianDate.split("-");
   const dayOfYear = parseInt(julianDay, 10);
