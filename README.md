@@ -102,4 +102,4 @@ This project is licensed under the MIT License, permitting anyone to freely use,
 
 ---
 
-Thank you for checking out LandStat! We are excited to see the community's feedback and contributions to this initiative for analyzing and understanding global vegetation health. 🌍🌱🚀
+Thank you for checking out our project,LandStat! We are excited to see the community's feedback and contributions to this initiative for analyzing and understanding global vegetation health. 🌍🌱🚀
