@@ -74,9 +74,16 @@ LandStat's functionalities are powered by a combination of APIs and technologies
 
 ## 📷 Preview
 
-[Selecting Location](./videos/LandStat1.mov)<br>
-[Download and Share Feature](./videos/LandStat2.mov)<br>
-[Graph and Past Data](./videos/LandStat3.mov)
+
+https://github.com/user-attachments/assets/99eaa4a4-e4cc-4b68-9b55-9c86ff77a0f1
+
+
+
+https://github.com/user-attachments/assets/a281800a-0823-4c8a-83db-0404901b3a58
+
+
+https://github.com/user-attachments/assets/459c6fa2-495c-4c43-91ac-ac9297c6622f
+
 
 ## 🚀 Planned Enhancements
 
