@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Autocomplete } from "@react-google-maps/api";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from "axios";
-import Sidebar from "./Sidebar";
 import SidebarSwitch from "./SidebarSwitch";
 import SaveSidebar from "./SaveSidebar";
 import logo from "../images/logo.png";
@@ -341,7 +340,6 @@ export default function MapSidebar({
         </nav>
       </aside>
 
-      <Sidebar className="z-50" />
       <div
         className={`absolute top-0 left-16 w-[400px] z-10 flex flex-col ${
           isExpanded
