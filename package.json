@@ -1,6 +1,7 @@
 {
   "name": "landsat",
   "version": "0.1.0",
+  "homepage": "https://landsat-8nqk8d1f4-ishaanj91s-projects.vercel.app/",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -52,7 +53,6 @@
     "build": "ESLINT_NO_DEV_ERRORS=true react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-    
   },
   "eslintConfig": {
     "extends": [
