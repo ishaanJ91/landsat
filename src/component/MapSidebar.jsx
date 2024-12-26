@@ -6,7 +6,7 @@ import SidebarSwitch from "./SidebarSwitch";
 import SaveSidebar from "./SaveSidebar";
 import logo from "../images/logo.png";
 import History from "./History";
-import Chart from "./Chart";
+// import Chart from "./Chart";
 
 const getPathRowFromLatLng = async (latitude, longitude) => {
   try {

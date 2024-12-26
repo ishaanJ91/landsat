@@ -39,7 +39,7 @@ export default function Register() {
     try {
       await axios.post("/register-google", { email, name });
       alert(`Google registration successful for ${name}`);
-      navigate("/dashboard");
+      navigate("/dashboard/target-location");
     } catch (e) {
       console.error("Google register error:", e);
       alert("Google registration failed");

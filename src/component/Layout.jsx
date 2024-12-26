@@ -9,7 +9,7 @@ export default function Layout() {
     "/register",
     "/login",
     "/target-location",
-    "/dashboard",
+    "/dashboard/target-location",
   ];
 
   return (

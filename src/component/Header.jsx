@@ -41,7 +41,7 @@ export default function Header() {
   // Redirect logged-in user to dashboard on home route
   useEffect(() => {
     if (isLoggedIn && window.location.pathname === "/") {
-      navigate("/dashboard");
+      navigate("/dashboard/target-location");
     }
   }, [isLoggedIn, navigate]);
 

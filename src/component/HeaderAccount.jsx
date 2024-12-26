@@ -53,7 +53,7 @@ export default function HeaderAccount() {
         <div className="mx-auto px-14 flex justify-between items-center">
           <div className="flex-shrink-0">
             <a
-              href="/dashboard"
+              href="/dashboard/target-location"
               title="Landsat Tracker"
               className="flex rounded outline-none focus:ring-1 focus:ring-gray-100 focus:ring-offset-2"
             >
@@ -66,7 +66,7 @@ export default function HeaderAccount() {
           {/* Desktop Navigation */}
           <div className="hidden lg:flex lg:space-x-10 items-center">
             <Link
-              to="/dashboard"
+              to="/"
               title="Home"
               className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
             >
