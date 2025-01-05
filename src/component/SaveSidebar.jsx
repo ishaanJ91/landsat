@@ -13,7 +13,7 @@ export default function SaveSidebar({ onClose }) {
       console.error("Error fetching saved locations:", error);
     }
   };
-  
+
   useEffect(() => {
     fetchSavedLocations();
   }, []);
@@ -37,40 +37,57 @@ export default function SaveSidebar({ onClose }) {
 
   return (
     <>
-      <div className="absolute left-0 bg-white top-0 -z-10 overflow-y-auto w-96 p-4">
+      <div
+        className="absolute left-0 bg-white top-0 z-10 overflow-y-auto h-full w-96 p-4"
+        style={{ maxHeight: "85vh" }}
+      >
         <div className="relative">
           {/* Close button */}
           <button
             onClick={onClose}
             className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
           >
-            ✕ {/* You can replace this with an SVG icon if preferred */}
+            ✕
           </button>
-          
+
           <h2 className="text-xl font-bold mb-4">Saved Locations</h2>
 
-          <div className="grid grid-cols-1 space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {savedLocations.length > 0 ? (
               savedLocations.map((location, index) => (
-                <div key={index} className="flex flex-row p-4 gap-4 bg-gray-100 rounded-lg">
-                  <img className="w-24 h-24 rounded-lg" src={location.image} alt="Location Thumbnail" />
+                <div
+                  key={index}
+                  className="flex flex-row p-4 gap-4 bg-gray-100 rounded-lg"
+                >
+                  <img
+                    className="w-24 h-24 rounded-lg"
+                    src={location.image}
+                    alt="Location Thumbnail"
+                  />
 
                   <div className="flex flex-col flex-grow">
-                    <h3 className="font-semibold text-xl">{location.locationName}</h3>
+                    <h3 className="font-semibold text-xl">
+                      {location.locationName}
+                    </h3>
                     <p className="text-base -mt-1">{location.region}</p>
 
                     <div className="flex flex-row pt-5 space-x-2">
                       {/* View Button */}
                       <button
-                        onClick={() => handleViewDetails(location.coordinates.latitude, location.coordinates.longitude)}
-                        className="px-6 py-1 text-xs text-black border-1 border-gray-900 rounded-lg hover:bg-gray-900 hover:text-white"
+                        onClick={() =>
+                          handleViewDetails(
+                            location.coordinates.latitude,
+                            location.coordinates.longitude
+                          )
+                        }
+                        className="px-6 py-1 text-xs text-black border border-gray-900 rounded-lg hover:bg-gray-900 hover:text-white"
                       >
                         View
                       </button>
                       {/* Delete Button */}
                       <button
                         onClick={() => handleUnsave(location._id)}
-                        className="px-6 py-1 text-xs  text-white bg-red-500 rounded-lg hover:bg-red-600"
+                        className="px-6 py-1 text-xs text-white bg-red-500 rounded-lg hover:bg-red-600"
                       >
                         Delete
                       </button>

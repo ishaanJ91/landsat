@@ -7,16 +7,13 @@ const cookieParser = require("cookie-parser");
 const ee = require("@google/earthengine");
 const axios = require("axios");
 
-require("dotenv").config();
+require("dotenv").config({ path: "/Users/macncheese/Documents/landsat/.env" });
 
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "mysecretkey";
 
-// Load Earth Engine private key
-const privateKey = require("PRIVATE_KEY");
-
-// Authenticate Earth Engine using the service account
+const privateKey = require(process.env.GOOGLE_EARTH_ENGINE);
 ee.data.authenticateViaPrivateKey(privateKey, () => {
   ee.initialize(null, null, () => {
     console.log("Google Earth Engine client initialized.");
@@ -26,10 +23,15 @@ ee.data.authenticateViaPrivateKey(privateKey, () => {
 app.use(express.json());
 app.use(cookieParser());
 
-mongoose.connect(process.env.MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+console.log("MONGO_URL:", process.env.MONGO_URL);
+
+mongoose
+  .connect(process.env.MONGO_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("Error connecting to MongoDB:", err));
 
 app.use(
   cors({
@@ -486,7 +488,7 @@ app.get("/saved-locations", async (req, res) => {
 
 app.delete("/unsave", async (req, res) => {
   const { token } = req.cookies;
-  const { lat, lng } = req.query; // Get lat and lng from query parameters
+  const { lat, lng } = req.query;
 
   try {
     // Verify JWT token
@@ -496,7 +498,6 @@ app.delete("/unsave", async (req, res) => {
       }
 
       try {
-        // Find and delete the place document for the authenticated user based on lat/lng
         const deletedLocation = await Place.findOneAndDelete({
           user: userData.id,
           "coordinates.latitude": lat,

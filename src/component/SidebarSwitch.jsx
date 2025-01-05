@@ -214,12 +214,12 @@ export default function SidebarSwitcher({
             <Cloud
               lat={inputLat}
               lon={inputLng}
-              apiKey={"YOUR_API_KEY"} // Replace with your actual API key
+              apiKey={process.env.WEATHER_API_KEY} // Replace with your actual API key
             />
             <SurfaceTemp
               lat={inputLat}
               lon={inputLng}
-              apiKey={"YOUR_API_KEY"} // Replace with your actual API key
+              apiKey={process.env.WEATHER_API_KEY} // Replace with your actual API key
             />
           </div>
         </div>
