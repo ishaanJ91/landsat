@@ -18,10 +18,8 @@
 .env.development.local
 .env.test.local
 .env.production.local
-.cultivated-cove-437711-f0-41af9d0eb621.json
 
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .vercel
-cultivated-cove-437711-f0-41af9d0eb621.json
