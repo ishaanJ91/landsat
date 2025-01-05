@@ -541,7 +541,7 @@ function MyMap() {
       style={{ position: "relative" }}
     >
       <LoadScript
-        googleMapsApiKey={process.env.GOOGLE_MAPS}
+        googleMapsApiKey={process.env.REACT_APP_GOOGLE_MAPS}
         libraries={libraries}
         onLoad={() => console.log("Google Maps API Loaded Successfully")}
         onError={(error) => console.error("Google Maps API Error:", error)}
