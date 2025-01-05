@@ -5,10 +5,10 @@ LandStat is an interactive web application designed to provide users with vegeta
 ## 📑 Table of Contents
 
 - 📃 [Overview](#overview)
+- - 📷 [Preview](#preview)
 - 🔗 [Core Technologies & APIs](#core-technologies--apis)
 - 🌟 [Key Features](#key-features)
 - 💻 [How to Use](#how-to-use)
-- 📷 [Preview](#preview)
 - 🚀 [Planned Enhancements](#planned-enhancements)
 - 🤝 [Contributing to LandStat](#contributing-to-landstat)
 - 📄 [License](#license)
@@ -44,6 +44,18 @@ LandStat's functionalities are powered by a combination of APIs and technologies
 - **Functionality**: Serves as the primary database for storing user data, including saved NDVI visualizations and metadata.
 - **Integration**: Works seamlessly with Mongoose for structured data modeling and rapid retrieval of user-specific content.
 
+## 📷 Preview
+
+
+https://github.com/user-attachments/assets/99eaa4a4-e4cc-4b68-9b55-9c86ff77a0f1
+
+
+
+https://github.com/user-attachments/assets/a281800a-0823-4c8a-83db-0404901b3a58
+
+
+https://github.com/user-attachments/assets/459c6fa2-495c-4c43-91ac-ac9297c6622f
+
 ## 🌟 Key Features
 
 - **Interactive NDVI Map Visualization**:
@@ -71,18 +83,6 @@ LandStat's functionalities are powered by a combination of APIs and technologies
 - **Click & Explore**: Click on any location on the map to fetch and view its NDVI data, rendered in real-time. The map displays a 90x90 meter NDVI visualization while the sidebar provides a 3x3 pixel breakdown for detailed analysis.
 - **Utilize Metadata**: View the exact coordinates of the selected point and the next satellite overpass details to stay updated on data availability.
 - **Save & Share Insights**: Use the "Save", "Download", and "Share" features to retain or distribute visualizations of the NDVI data for future analysis or sharing with peers.
-
-## 📷 Preview
-
-
-https://github.com/user-attachments/assets/99eaa4a4-e4cc-4b68-9b55-9c86ff77a0f1
-
-
-
-https://github.com/user-attachments/assets/a281800a-0823-4c8a-83db-0404901b3a58
-
-
-https://github.com/user-attachments/assets/459c6fa2-495c-4c43-91ac-ac9297c6622f
 
 
 ## 🚀 Planned Enhancements
