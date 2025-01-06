@@ -1,7 +1,6 @@
 {
   "name": "landsat",
   "version": "0.1.0",
-  "homepage": "https://landsat.vercel.app/",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.13.3",

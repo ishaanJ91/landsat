@@ -19,10 +19,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "MONGO_URL": "@mongo_url",
-    "JWT_SECRET": "@jwt_secret",
-    "GOOGLE_EARTH_ENGINE": "@google_earth_engine"
-  }
+  ]
 }

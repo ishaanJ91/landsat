@@ -11,8 +11,7 @@ require("dotenv").config({ path: "/Users/macncheese/Documents/landsat/.env" });
 
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
-const jwtSecret =
-  "bd50cbaa9b8fde0dd7e5209dad5dde4bde95b8997e588210ff1f66a1ac10c0c7056e86dab0cf1738c973908e686b7689ab62157efc630d71b1655dcbb000fb06";
+const jwtSecret = process.env.JWT_SECRET;
 
 // Get the Base64-encoded private key from the environment variable
 const privateKeyBase64 = process.env.GOOGLE_EARTH_ENGINE;
