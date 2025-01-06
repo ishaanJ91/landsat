@@ -16,6 +16,7 @@
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "@turf/jsts": "^2.7.2",
     "@turf/turf": "^7.1.0",
     "autoprefixer": "^10.4.20",
     "axios": "^1.7.7",
@@ -24,6 +25,7 @@
     "chart.js": "^4.4.4",
     "chartjs-adapter-date-fns": "^3.0.0",
     "cookie-parser": "^1.4.6",
+    "core-js": "^3.39.0",
     "cors": "^2.8.5",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
@@ -47,6 +49,7 @@
     "rsuite": "^5.71.0",
     "semantic-ui-react": "^2.1.5",
     "tailwind": "^4.0.0",
+    "uuid": "^11.0.4",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
@@ -72,5 +75,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11"
   }
 }
