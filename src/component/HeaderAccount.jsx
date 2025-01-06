@@ -14,7 +14,7 @@ export default function HeaderAccount() {
 
   async function logout() {
     try {
-      await axios.post("/logout");
+      await axios.post("/api/logout");
       setUser(null); // Clear user state
       setRedirect("/"); // Redirect to the homepage
     } catch (error) {
@@ -53,7 +53,7 @@ export default function HeaderAccount() {
         <div className="mx-auto px-14 flex justify-between items-center">
           <div className="flex-shrink-0">
             <a
-              href="/dashboard/target-location"
+              href="/api/target-location"
               title="Landsat Tracker"
               className="flex rounded outline-none focus:ring-1 focus:ring-gray-100 focus:ring-offset-2"
             >
@@ -73,7 +73,7 @@ export default function HeaderAccount() {
               Home
             </Link>
             <Link
-              to="/dashboard/target-location"
+              to="/apis/target-location"
               title="Data"
               className="text-base font-medium text-gray-100 transition-all duration-200 hover:text-opacity-50"
             >

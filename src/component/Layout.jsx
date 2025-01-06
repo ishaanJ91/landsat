@@ -6,10 +6,10 @@ export default function Layout() {
 
   // Paths where you don't want to show the Header
   const hideHeaderOnPaths = [
-    "/register",
-    "/login",
-    "/target-location",
-    "/dashboard/target-location",
+    "/api/register",
+    "/api/login",
+    "/api/target-location",
+    "/api/target-location",
   ];
 
   return (

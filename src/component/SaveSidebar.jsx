@@ -7,7 +7,7 @@ export default function SaveSidebar({ onClose }) {
   // Function to fetch saved locations
   const fetchSavedLocations = async () => {
     try {
-      const response = await axios.get("/saved-locations");
+      const response = await axios.get("/api/saved-locations");
       setSavedLocations(response.data);
     } catch (error) {
       console.error("Error fetching saved locations:", error);
@@ -21,7 +21,7 @@ export default function SaveSidebar({ onClose }) {
   // Function to handle deleting a saved location
   const handleUnsave = async (id) => {
     try {
-      await axios.delete(`/unsave-location/${id}`);
+      await axios.delete(`/api/unsave-location/${id}`);
       // Refresh the list of saved locations after deleting
       fetchSavedLocations();
     } catch (error) {
@@ -32,7 +32,7 @@ export default function SaveSidebar({ onClose }) {
   // Function to handle viewing details of a location
   const handleViewDetails = (latitude, longitude) => {
     // Redirect to the target location URL with the given latitude and longitude
-    window.location.href = `http://localhost:3000/dashboard/target-location?lat=${latitude}&lng=${longitude}&zoom=10`;
+    window.location.href = `http://localhost:3000/api/target-location?lat=${latitude}&lng=${longitude}&zoom=10`;
   };
 
   return (

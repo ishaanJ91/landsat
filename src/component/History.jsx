@@ -49,7 +49,7 @@ export default function History({
   const fetchNDVIData = async () => {
     console.log("Fetching NDVI data...");
     try {
-      const response = await axios.get("/ndvi-images", {
+      const response = await axios.get("/api/ndvi-images", {
         params: {
           latitude,
           longitude,

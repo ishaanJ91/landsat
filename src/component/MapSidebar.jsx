@@ -142,7 +142,7 @@ export default function MapSidebar({
     };
 
     try {
-      await axios.post("/save", locationData);
+      await axios.post("/api/save", locationData);
       setRedirect(true);
     } catch (error) {
       console.error("Error saving location data:", error);

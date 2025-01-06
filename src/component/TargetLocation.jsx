@@ -284,7 +284,7 @@ function MyMap() {
       const zoom = zoomLevel;
 
       // Create URL with query params for lat, lng, and zoom
-      const shareURL = `${baseURL}/dashboard/target-location?lat=${lat}&lng=${lng}&zoom=${zoom}`;
+      const shareURL = `${baseURL}/api/target-location?lat=${lat}&lng=${lng}&zoom=${zoom}`;
       return shareURL;
     }
     return null;
@@ -319,7 +319,7 @@ function MyMap() {
 
       // Update the URL with the new location
       navigate(
-        `/dashboard/target-location?lat=${formattedLat}&lng=${formattedLng}&zoom=${zoomLevel}`,
+        `/api/target-location?lat=${formattedLat}&lng=${formattedLng}&zoom=${zoomLevel}`,
         { replace: true }
       );
     }
@@ -329,7 +329,7 @@ function MyMap() {
   const fetchNDVIData = async (lat, lng) => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/earth-engine-data",
+        "http://localhost:3001/api/earth-engine-data",
         {
           params: { latitude: lat, longitude: lng },
         }

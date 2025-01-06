@@ -2,21 +2,27 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
+      "use": "@vercel/static-build"
     }
   ],
   "routes": [
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "MONGO_URL": "@mongo_url",
+    "JWT_SECRET": "@jwt_secret",
+    "GOOGLE_EARTH_ENGINE": "@google_earth_engine"
+  }
 }

@@ -20,7 +20,7 @@ function App() {
         <Route index element={<HomePage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard/target-location" element={<TargetLocation />} />
+        <Route path="/api/target-location" element={<TargetLocation />} />
       </Routes>
     </UserContextProvider>
   );

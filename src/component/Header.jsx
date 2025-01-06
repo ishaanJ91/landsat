@@ -41,7 +41,7 @@ export default function Header() {
   // Redirect logged-in user to dashboard on home route
   useEffect(() => {
     if (isLoggedIn && window.location.pathname === "/") {
-      navigate("/dashboard/target-location");
+      navigate("/api/target-location");
     }
   }, [isLoggedIn, navigate]);
 
@@ -50,7 +50,7 @@ export default function Header() {
     localStorage.removeItem("token");
     localStorage.removeItem("userName");
     setIsLoggedIn(false);
-    navigate("/login");
+    navigate("/api/login");
   };
 
   return (

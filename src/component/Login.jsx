@@ -14,7 +14,7 @@ export default function LoginPage() {
   async function handleLoginSubmit(ev) {
     ev.preventDefault();
     try {
-      const { data } = await axios.post("/login", { email, password });
+      const { data } = await axios.post("/api/login", { email, password });
       setUser(data);
       alert("Login successful");
       setRedirect(true);
@@ -29,7 +29,7 @@ export default function LoginPage() {
     const { email, name } = decoded;
 
     try {
-      const { data } = await axios.post("/login-google", { email, name });
+      const { data } = await axios.post("/api/login-google", { email, name });
       setUser(data);
       setRedirect(true);
     } catch (e) {
@@ -50,7 +50,7 @@ export default function LoginPage() {
   }, []);
 
   if (redirect) {
-    return <Navigate to="/dashboard/target-location" />; // Redirect to dashboard after login
+    return <Navigate to="/api/target-location" />; // Redirect to dashboard after login
   }
 
   return (

@@ -29,7 +29,7 @@ export default function Chart({ latitude, longitude }) {
     const fetchData = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3001/earth-engine-seasonal-ndvi",
+          "http://localhost:3001/api/earth-engine-seasonal-ndvi",
           {
             params: {
               latitude,

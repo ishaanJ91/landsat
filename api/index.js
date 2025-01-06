@@ -11,17 +11,54 @@ require("dotenv").config({ path: "/Users/macncheese/Documents/landsat/.env" });
 
 const app = express();
 const bcryptSalt = bcrypt.genSaltSync(10);
-const jwtSecret = "mysecretkey";
+const jwtSecret =
+  "bd50cbaa9b8fde0dd7e5209dad5dde4bde95b8997e588210ff1f66a1ac10c0c7056e86dab0cf1738c973908e686b7689ab62157efc630d71b1655dcbb000fb06";
 
-const privateKey = require(process.env.GOOGLE_EARTH_ENGINE);
-ee.data.authenticateViaPrivateKey(privateKey, () => {
-  ee.initialize(null, null, () => {
-    console.log("Google Earth Engine client initialized.");
-  });
-});
+// Get the Base64-encoded private key from the environment variable
+const privateKeyBase64 = process.env.GOOGLE_EARTH_ENGINE;
+
+if (privateKeyBase64) {
+  try {
+    // Decode the Base64 string and parse it as JSON
+    const privateKey = JSON.parse(
+      Buffer.from(privateKeyBase64, "base64").toString("utf-8")
+    );
+
+    // Authenticate and initialize Google Earth Engine
+    ee.data.authenticateViaPrivateKey(privateKey, () => {
+      ee.initialize(null, null, () => {
+        console.log("Google Earth Engine client initialized.");
+      });
+    });
+  } catch (error) {
+    console.error("Failed to decode or parse the private key:", error);
+  }
+} else {
+  console.error("GOOGLE_EARTH_ENGINE environment variable is not defined.");
+}
 
 app.use(express.json());
 app.use(cookieParser());
+
+// export default async function handler(req, res) {
+//   if (req.method === "POST") {
+//     const { name, email, password } = req.body;
+//     try {
+//       await dbConnect(); // Ensure the database is connected
+
+//       const userDoc = await User.create({
+//         name,
+//         email,
+//         password: bcrypt.hashSync(password, bcryptSalt),
+//       });
+//       res.status(201).json(userDoc);
+//     } catch (error) {
+//       res.status(422).json({ error: error.message });
+//     }
+//   } else {
+//     res.status(405).json({ error: "Method not allowed" });
+//   }
+// }
 
 console.log("MONGO_URL:", process.env.MONGO_URL);
 
@@ -61,7 +98,7 @@ const placeSchema = new mongoose.Schema({
       index: Number,
       ndvi: Number,
     },
-  ], // Add ndviGrid to store NDVI data
+  ],
   dateSaved: { type: Date, default: Date.now },
 });
 
@@ -112,7 +149,7 @@ const sendEmailNotification = async (email, subject, text) => {
 };
 
 // Authentication routes
-app.post("/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
   try {
     const userDoc = await User.create({
@@ -126,7 +163,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/register-google", async (req, res) => {
+app.post("/api/register-google", async (req, res) => {
   const { email, name } = req.body;
 
   try {
@@ -152,12 +189,12 @@ app.post("/register-google", async (req, res) => {
       }
     );
   } catch (error) {
-    console.error("Error in /register-google:", error);
+    console.error("Error in /api/register-google:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
   const userDoc = await User.findOne({ email });
   if (userDoc) {
@@ -186,7 +223,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/login-google", async (req, res) => {
+app.post("/api/login-google", async (req, res) => {
   const { email, name } = req.body;
   try {
     const user = await findOrCreateUser(email, name);
@@ -211,7 +248,7 @@ app.post("/login-google", async (req, res) => {
   }
 });
 
-app.get("/profile", (req, res) => {
+app.get("/api/profile", (req, res) => {
   const { token } = req.cookies;
   if (!token) {
     return res.status(401).json("No token found");
@@ -230,7 +267,7 @@ app.get("/profile", (req, res) => {
 });
 
 // Earth Engine route to fetch NDVI data and tile URL
-app.get("/earth-engine-data", (req, res) => {
+app.get("/api/earth-engine-data", (req, res) => {
   const { longitude, latitude } = req.query;
 
   if (!longitude || !latitude) {
@@ -337,7 +374,7 @@ function julianToGregorian(julianDate) {
 }
 
 // Endpoint to convert lat/lng to path/row
-app.post("/convert-latlng-to-pathrow", async (req, res) => {
+app.post("/api/convert-latlng-to-pathrow", async (req, res) => {
   const { latitude, longitude } = req.body;
 
   if (!latitude || !longitude) {
@@ -356,7 +393,7 @@ app.post("/convert-latlng-to-pathrow", async (req, res) => {
 });
 
 // Overpass Prediction API endpoint
-app.get("/landsat-overpass", async (req, res) => {
+app.get("/api/landsat-overpass", async (req, res) => {
   const { year, month, day, path, row } = req.query;
 
   if (!year || !month || !day || !path || !row) {
@@ -374,11 +411,11 @@ app.get("/landsat-overpass", async (req, res) => {
 });
 
 // Logout
-app.post("/logout", (req, res) => {
+app.post("/api/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
 
-app.post("/save", async (req, res) => {
+app.post("/api/save", async (req, res) => {
   const { token } = req.cookies;
   const { image, locationName, region, coordinates, ndviGrid } = req.body; // Get ndviGrid from request
 
@@ -461,7 +498,7 @@ app.post("/save", async (req, res) => {
   }
 });
 
-app.get("/saved-locations", async (req, res) => {
+app.get("/api/saved-locations", async (req, res) => {
   const { token } = req.cookies;
 
   try {
@@ -486,7 +523,7 @@ app.get("/saved-locations", async (req, res) => {
   }
 });
 
-app.delete("/unsave", async (req, res) => {
+app.delete("/api/unsave", async (req, res) => {
   const { token } = req.cookies;
   const { lat, lng } = req.query;
 
@@ -531,7 +568,7 @@ const toggleSaveLocation = async (ev) => {
   try {
     if (isLocationSaved) {
       // Unsave the location
-      await axios.delete("/unsave", {
+      await axios.delete("/api/unsave", {
         params: { lat: inputLat, lng: inputLng },
       });
       setIsLocationSaved(false);
@@ -553,7 +590,7 @@ const toggleSaveLocation = async (ev) => {
         ndviGrid: ndviGridWithColors,
       };
 
-      await axios.post("/save", locationData);
+      await axios.post("/api/save", locationData);
       setIsLocationSaved(true);
     }
   } catch (error) {
@@ -594,7 +631,7 @@ const getPathRowFromLatLng = async (latitude, longitude) => {
   }
 };
 
-app.get("/earth-engine-seasonal-ndvi", async (req, res) => {
+app.get("/api/earth-engine-seasonal-ndvi", async (req, res) => {
   const { longitude, latitude } = req.query;
 
   if (!longitude || !latitude) {
@@ -749,7 +786,7 @@ function julianToGregorian(julianDate) {
 }
 
 // Overpass Prediction API endpoint
-app.get("/landsat-overpass", async (req, res) => {
+app.get("/api/landsat-overpass", async (req, res) => {
   const { year, month, day, path, row } = req.query;
 
   if (!year || !month || !day || !path || !row) {
@@ -767,7 +804,7 @@ app.get("/landsat-overpass", async (req, res) => {
 });
 
 // Endpoint to convert lat/lng to path/row
-app.post("/convert-latlng-to-pathrow", async (req, res) => {
+app.post("/api/convert-latlng-to-pathrow", async (req, res) => {
   const { latitude, longitude } = req.body;
 
   if (!latitude || !longitude) {
@@ -785,7 +822,7 @@ app.post("/convert-latlng-to-pathrow", async (req, res) => {
   }
 });
 
-app.get("/ndvi-images", async (req, res) => {
+app.get("/api/ndvi-images", async (req, res) => {
   const { startDate, endDate, latitude, longitude, zoomLevel } = req.query;
 
   if (!startDate || !endDate || !latitude || !longitude) {
@@ -863,7 +900,7 @@ app.get("/ndvi-images", async (req, res) => {
   }
 });
 
-app.get("/earth-engine-seasonal-ndvi", async (req, res) => {
+app.get("/api/earth-engine-seasonal-ndvi", async (req, res) => {
   const { longitude, latitude } = req.query;
 
   if (!longitude || !latitude) {
@@ -965,7 +1002,7 @@ const fetchLastOverpassPrediction = async (path, row, startDate, cycleDays) => {
   };
 };
 
-app.post("/predict-overpass", async (req, res) => {
+app.post("/api/predict-overpass", async (req, res) => {
   const { latitude, longitude, startDate } = req.body;
 
   if (!latitude || !longitude || !startDate) {
@@ -1030,7 +1067,7 @@ app.post("/predict-overpass", async (req, res) => {
   }
 });
 
-app.get("/earth-engine-seasonal-ndvi", async (req, res) => {
+app.get("/api/earth-engine-seasonal-ndvi", async (req, res) => {
   const { longitude, latitude } = req.query;
 
   if (!longitude || !latitude) {

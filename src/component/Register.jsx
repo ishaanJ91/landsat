@@ -13,7 +13,7 @@ export default function Register() {
   function handleRegisterSubmit(ev) {
     ev.preventDefault();
     axios
-      .post("/register", {
+      .post("api/register", {
         name,
         email,
         password,
@@ -23,7 +23,7 @@ export default function Register() {
         setName("");
         setEmail("");
         setPassword("");
-        navigate("/dashboard/target-location");
+        navigate("/api/target-location");
       })
       .catch((error) => {
         console.error("Error during registration:", error);
@@ -37,9 +37,9 @@ export default function Register() {
     const { email, name } = decoded;
 
     try {
-      await axios.post("/register-google", { email, name });
+      await axios.post("api/register-google", { email, name });
       alert(`Google registration successful for ${name}`);
-      navigate("/dashboard/target-location");
+      navigate("/api/target-location");
     } catch (e) {
       console.error("Google register error:", e);
       alert("Google registration failed");
@@ -111,11 +111,11 @@ export default function Register() {
 
           <p className="text-gray-500 text-sm mt-6">
             By signing up, you agree to our{" "}
-            <Link to="/terms" className="underline">
+            <Link to="/api/terms" className="underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link to="/privacy" className="underline">
+            <Link to="/api/privacy" className="underline">
               Data Processing Agreement
             </Link>
             .
@@ -125,7 +125,7 @@ export default function Register() {
 
           <p className="mt-4 text-gray-400 text-base font-bold">
             Already have an account? &nbsp;
-            <Link to="/login" className="text-indigo-500 hover:underline">
+            <Link to="/api/login" className="text-indigo-500 hover:underline">
               Login &#x2192;
             </Link>
           </p>
