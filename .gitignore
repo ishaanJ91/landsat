@@ -28,3 +28,5 @@ yarn-error.log*
 encoded-key.txt
 
 .env*.local
+node_modules/
+frontend/node_modules/.cache/
