@@ -3,7 +3,7 @@ import { useContext, useState, useEffect } from "react";
 import axios from "axios";
 import logo from "../images/logo.png";
 import { UserContext } from "./UserContext";
-import { jwtDecode } from "jwt-decode"; // Use jwt-decode to decode the token
+import { jwtDecode } from "jwt-decode"; // Corrected to import jwt-decode properly
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -62,13 +62,14 @@ export default function LoginPage() {
       setRedirect(true);
     } catch (e) {
       console.error("Google login error:", e);
+      alert("Google login failed");
     }
   };
 
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
-      client_id: "CLIENT_ID",
+      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID, // Replace with your actual Google Client ID
       callback: handleGoogleLoginSuccess,
     });
     google.accounts.id.renderButton(document.getElementById("google-signin"), {
@@ -78,7 +79,7 @@ export default function LoginPage() {
   }, []);
 
   if (redirect) {
-    return <Navigate to="/api/target-location" />; // Redirect to dashboard after login
+    return <Navigate to="/target-location" />; // Redirect to target location after login
   }
 
   return (
