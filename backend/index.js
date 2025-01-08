@@ -13,25 +13,20 @@ const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const MongoStore = require("connect-mongo");
 
 // Load environment variables from backend .env file
+const bcryptSalt = bcrypt.genSaltSync(10); // Example for generating salt
 require("dotenv").config();
 
 const app = express();
 
-// Define allowed origins for CORS
 const allowedOrigins = [
-  "https://landstat-frontend.vercel.app",
-  "http://localhost:3000",
+  "https://landstat-frontend.vercel.app", // Production frontend
+  "http://localhost:3000", // Development frontend
 ];
 
-// Middleware order is important!
-// 1. Basic middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 2. CORS configuration
 app.use(
   cors({
     origin: function (origin, callback) {
+      // Allow requests with no origin (e.g., mobile apps or curl)
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
@@ -42,11 +37,16 @@ app.use(
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true,
+    credentials: true, // Allow cookies and credentials
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Middleware order is important!
+// 1. Basic middlewares
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.options("*", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", req.headers.origin);
@@ -61,61 +61,34 @@ app.options("*", (req, res) => {
 // 3. Cookie parser - only configure once
 app.use(cookieParser(process.env.SESSION_SECRET));
 
-// 4. Session configuration
 app.use(
   session({
     secret:
       process.env.SESSION_SECRET || "fallback-secret-do-not-use-in-production",
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URL, // Ensure this is correct
+    }),
     resave: false,
     saveUninitialized: false,
     name: "landsat.sid",
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Adjust for local dev
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   })
 );
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URL,
-    }),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-    },
-  })
-);
-// Authentication middleware
-const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
-  }
-};
-
-// XMLHttpRequest override
-XMLHttpRequest.prototype._setOutput = function () {
-  try {
-    this.file = "/tmp/xmlhttprequest-sync";
-    fs.writeFileSync(this.file, "");
-  } catch (err) {
-    console.error("Error overriding XMLHttpRequest file output:", err);
-  }
-};
+// // XMLHttpRequest override
+// XMLHttpRequest.prototype._setOutput = function () {
+//   try {
+//     this.file = "/tmp/xmlhttprequest-sync";
+//     fs.writeFileSync(this.file, "");
+//   } catch (err) {
+//     console.error("Error overriding XMLHttpRequest file output:", err);
+//   }
+// };
 
 // Your routes go here...
 
@@ -266,18 +239,37 @@ const sendEmailNotification = async (email, subject, text) => {
   }
 };
 
-// Authentication routes
 app.post("/api/register", async (req, res) => {
   const { name, email, password } = req.body;
+
+  // Basic validation
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  if (password.length < 6) {
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 6 characters long" });
+  }
+
   try {
     const userDoc = await User.create({
       name,
       email,
       password: bcrypt.hashSync(password, bcryptSalt),
     });
-    res.json(userDoc);
+
+    // Return only necessary user data
+    const { password: hashedPassword, ...userInfo } = userDoc._doc;
+    res.status(201).json(userInfo);
   } catch (e) {
-    res.status(422).json(e);
+    if (e.code === 11000) {
+      // Duplicate key error (email already exists)
+      res.status(422).json({ error: "Email already registered" });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
   }
 });
 

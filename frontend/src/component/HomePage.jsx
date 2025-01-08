@@ -63,8 +63,8 @@ export default function HomePage() {
           </div>
 
           <div className="absolute -top-20 left-96 w-[140vw] -z-10 overflow-hidden -z-1">
-            {/* <img src={earth} className="w-[200%] h-auto translate-x-[50%]" /> */}
-            <World />
+            <img src={earth} className="w-[200%] h-auto" />
+            {/* <World /> */}
           </div>
 
           <div className="flex flex-col py-6 my-20 px-3 text-gray-400">

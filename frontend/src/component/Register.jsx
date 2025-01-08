@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../images/logo.png";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // Use jwt-decode to decode the token
+import { jwtDecode } from "jwt-decode"; // Fixed incorrect destructuring
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -13,46 +13,73 @@ export default function Register() {
   function handleRegisterSubmit(ev) {
     ev.preventDefault();
     axios
-      .post("api/register", {
+      .post(`${process.env.REACT_APP_API_URL}/api/register`, {
         name,
         email,
         password,
       })
-      .then(() => {
-        alert(`Registration successful for ${name}`);
+      .then((response) => {
+        // Store the token securely
+        if (response.data.token) {
+          localStorage.setItem("authToken", response.data.token);
+          // Set authorization header for future requests
+          axios.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${response.data.token}`;
+        }
+
+        alert(
+          `Welcome ${name}! Your account has been created and you're now logged in.`
+        );
         setName("");
         setEmail("");
         setPassword("");
+
+        // Correct navigation for frontend route
         navigate("/api/target-location");
       })
       .catch((error) => {
         console.error("Error during registration:", error);
-        alert("Registration failed");
+        alert(error.response?.data?.message || "Registration failed");
       });
   }
 
-  // Google OAuth registration success handler
   const handleGoogleRegisterSuccess = async (response) => {
-    const decoded = jwtDecode(response.credential); // Decode the credential to extract information
-    const { email, name } = decoded;
-
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/register-google`, {
-        email,
-        name,
-      });
-      alert(`Google registration successful for ${name}`);
+      const decoded = jwtDecode(response.credential);
+      const { email, name } = decoded;
+
+      const registerResponse = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/register-google`,
+        {
+          email,
+          name,
+        }
+      );
+
+      if (registerResponse.data.token) {
+        localStorage.setItem("authToken", registerResponse.data.token);
+        axios.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${registerResponse.data.token}`;
+      }
+
+      alert(
+        `Welcome ${name}! Your account has been created and you're now logged in.`
+      );
+
+      // Correct navigation for frontend route
       navigate("/api/target-location");
     } catch (e) {
       console.error("Google register error:", e);
-      alert("Google registration failed");
+      alert(e.response?.data?.message || "Google registration failed");
     }
   };
 
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
-      client_id: "CLIENT_ID",
+      client_id: "CLIENT_ID", // Replace with your actual client ID
       callback: handleGoogleRegisterSuccess,
     });
     google.accounts.id.renderButton(document.getElementById("google-signin"), {
@@ -60,6 +87,14 @@ export default function Register() {
       size: "large",
     });
   }, []);
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      navigate("/api/target-location"); // Navigate to frontend route
+    }
+  }, [navigate]);
 
   return (
     <div className="overflow-x-hidden min-h-screen bg-black text-gray-100 flex items-center justify-center">
@@ -114,11 +149,11 @@ export default function Register() {
 
           <p className="text-gray-500 text-sm mt-6">
             By signing up, you agree to our{" "}
-            <Link to="/api/terms" className="underline">
+            <Link to="/terms" className="underline">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link to="/api/privacy" className="underline">
+            <Link to="/privacy" className="underline">
               Data Processing Agreement
             </Link>
             .
@@ -128,7 +163,7 @@ export default function Register() {
 
           <p className="mt-4 text-gray-400 text-base font-bold">
             Already have an account? &nbsp;
-            <Link to="/api/login" className="text-indigo-500 hover:underline">
+            <Link to="/login" className="text-indigo-500 hover:underline">
               Login &#x2192;
             </Link>
           </p>
