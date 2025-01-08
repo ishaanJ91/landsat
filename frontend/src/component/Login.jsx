@@ -3,14 +3,15 @@ import { useContext, useState, useEffect } from "react";
 import axios from "axios";
 import logo from "../images/logo.png";
 import { UserContext } from "./UserContext";
-import { jwtDecode } from "jwt-decode"; // Corrected to import jwt-decode properly
+import { jwtDecode } from "jwt-decode";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [redirect, setRedirect] = useState(false); // For redirection
-  const { setUser } = useContext(UserContext); // Access setUser from UserContext
+  const [redirect, setRedirect] = useState(false);
+  const { setUser } = useContext(UserContext);
 
+  // Regular login handler
   async function handleLoginSubmit(ev) {
     ev.preventDefault();
     try {
@@ -19,67 +20,83 @@ export default function LoginPage() {
         { email, password }
       );
 
-      const { token, user } = data; // Assuming the backend returns { token, user }
-
-      // Save token in localStorage
-      localStorage.setItem("token", token);
-
-      // Set user context
-      setUser(user);
-
-      // Set Axios defaults for future requests
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      alert("Login successful");
-      setRedirect(true);
+      const { token, user } = data;
+      handleSuccessfulLogin(token, user);
     } catch (e) {
-      alert("Login failed");
+      console.error("Login error:", e.response?.data || e.message);
+      alert(
+        "Login failed: " + (e.response?.data?.message || "Please try again")
+      );
     }
   }
 
   // Google OAuth login success handler
   const handleGoogleLoginSuccess = async (response) => {
-    const decoded = jwtDecode(response.credential); // Decode the credential to extract information
-    const { email, name } = decoded;
-
     try {
+      const decoded = jwtDecode(response.credential);
+      console.log("Decoded Google credentials:", {
+        ...decoded,
+        sub: decoded.sub?.slice(0, 5) + "...", // Log partial sub for debugging
+      });
+
+      const { email, name, picture, sub: googleId } = decoded;
+
       const { data } = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/login-google`,
-        { email, name }
+        {
+          email,
+          name,
+          picture,
+          googleId, // Send Google's unique identifier
+        }
       );
 
-      const { token, user } = data; // Assuming the backend returns { token, user }
-
-      // Save token in localStorage
-      localStorage.setItem("token", token);
-
-      // Set user context
-      setUser(user);
-
-      // Set Axios defaults for future requests
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-
-      setRedirect(true);
+      const { token, user } = data;
+      handleSuccessfulLogin(token, user);
     } catch (e) {
-      console.error("Google login error:", e);
-      alert("Google login failed");
+      console.error("Google login error details:", {
+        status: e.response?.status,
+        data: e.response?.data,
+        message: e.message,
+      });
+      alert(
+        "Google login failed: " +
+          (e.response?.data?.message || "Please try again")
+      );
     }
   };
 
+  // Common success handler
+  const handleSuccessfulLogin = (token, user) => {
+    localStorage.setItem("token", token);
+    setUser(user);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    setRedirect(true);
+  };
+
   useEffect(() => {
-    /* global google */
+    if (!window.google) {
+      console.error("Google OAuth script not loaded");
+      return;
+    }
+
     google.accounts.id.initialize({
-      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID, // Replace with your actual Google Client ID
+      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
       callback: handleGoogleLoginSuccess,
     });
-    google.accounts.id.renderButton(document.getElementById("google-signin"), {
-      theme: "outline",
-      size: "large",
-    });
+
+    const googleButton = document.getElementById("google-signin");
+    if (googleButton) {
+      google.accounts.id.renderButton(googleButton, {
+        theme: "outline",
+        size: "large",
+        width: googleButton.offsetWidth,
+      });
+    }
   }, []);
 
   if (redirect) {
-    return <Navigate to="/target-location" />; // Redirect to target location after login
+    return <Navigate to="/api/target-location" />;
   }
 
   return (
@@ -87,7 +104,7 @@ export default function LoginPage() {
       <section className="top-0 bg-black z-30 relative">
         <div className="max-w-md mx-auto flex flex-col items-center justify-center">
           <div className="mb-6">
-            <img src={logo} className="h-40 w-40" />
+            <img src={logo} alt="Logo" className="h-40 w-40" />
           </div>
 
           <h2 className="text-2xl font-semibold mb-8">Login</h2>
@@ -100,7 +117,7 @@ export default function LoginPage() {
               placeholder="Email"
               value={email}
               onChange={(ev) => setEmail(ev.target.value)}
-              className="w-full py-3 px-4 bg-black border-1 border-white text-white rounded"
+              className="w-full py-3 px-4 bg-black border border-white text-white rounded"
               required
             />
             <input
@@ -108,29 +125,29 @@ export default function LoginPage() {
               placeholder="Password"
               value={password}
               onChange={(ev) => setPassword(ev.target.value)}
-              className="w-full py-3 px-4 bg-black border-1 border-white text-white rounded"
+              className="w-full py-3 px-4 bg-black border border-white text-white rounded"
               required
             />
 
             <button
               type="submit"
-              className="w-full mt-3 py-3 bg-gray-900 text-white font-semibold rounded"
+              className="w-full mt-3 py-3 bg-gray-900 text-white font-semibold rounded hover:bg-gray-800 transition-colors"
             >
               Login
             </button>
 
             <div className="my-2 w-full border-t border-gray-700"></div>
 
-            <div id="google-signin" className="w-full py-3 bg-white"></div>
+            <div id="google-signin" className="w-full"></div>
           </form>
 
           <p className="text-gray-500 text-sm mt-6">
             By logging in, you agree to our{" "}
-            <Link to="/terms" className="underline">
+            <Link to="/terms" className="underline hover:text-gray-400">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link to="/privacy" className="underline">
+            <Link to="/privacy" className="underline hover:text-gray-400">
               Data Processing Agreement
             </Link>
             .
@@ -139,9 +156,9 @@ export default function LoginPage() {
           <div className="mt-6 w-full border-t border-gray-700"></div>
 
           <p className="mt-4 text-gray-400 text-base font-bold">
-            Don't have an account? &nbsp;
+            Don't have an account?{" "}
             <Link to="/register" className="text-indigo-500 hover:underline">
-              Register &#x2192;
+              Register →
             </Link>
           </p>
         </div>

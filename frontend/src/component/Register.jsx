@@ -1,85 +1,93 @@
-import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../images/logo.png";
+import { useContext, useState, useEffect } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // Fixed incorrect destructuring
+import logo from "../images/logo.png";
+import { UserContext } from "./UserContext"; // Import UserContext
+import { jwtDecode } from "jwt-decode"; // Correct import for jwtDecode
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { setUser } = useContext(UserContext); // Use UserContext here
 
-  function handleRegisterSubmit(ev) {
+  async function handleRegisterSubmit(ev) {
     ev.preventDefault();
-    axios
-      .post(`${process.env.REACT_APP_API_URL}/api/register`, {
-        name,
-        email,
-        password,
-      })
-      .then((response) => {
-        // Store the token securely
-        if (response.data.token) {
-          localStorage.setItem("authToken", response.data.token);
-          // Set authorization header for future requests
-          axios.defaults.headers.common[
-            "Authorization"
-          ] = `Bearer ${response.data.token}`;
+    try {
+      const { data } = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/register`,
+        {
+          name,
+          email,
+          password,
         }
+      );
 
-        alert(
-          `Welcome ${name}! Your account has been created and you're now logged in.`
-        );
-        setName("");
-        setEmail("");
-        setPassword("");
+      const { token, user } = data;
 
-        // Correct navigation for frontend route
-        navigate("/api/target-location");
-      })
-      .catch((error) => {
-        console.error("Error during registration:", error);
-        alert(error.response?.data?.message || "Registration failed");
-      });
+      // Save token in localStorage
+      localStorage.setItem("authToken", token);
+
+      // Set user context
+      setUser(user);
+
+      // Set Axios defaults for future requests
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      alert(`Welcome ${name}! Your account has been created.`);
+      navigate("/api/target-location");
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert(
+        error.response?.data?.message ||
+          "Registration failed. Please try again."
+      );
+    }
   }
 
   const handleGoogleRegisterSuccess = async (response) => {
     try {
       const decoded = jwtDecode(response.credential);
-      const { email, name } = decoded;
+      const { email, name, picture, sub: googleId } = decoded;
 
-      const registerResponse = await axios.post(
+      const { data } = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/register-google`,
         {
           email,
           name,
+          picture,
+          googleId,
+          authProvider: "google",
         }
       );
 
-      if (registerResponse.data.token) {
-        localStorage.setItem("authToken", registerResponse.data.token);
-        axios.defaults.headers.common[
-          "Authorization"
-        ] = `Bearer ${registerResponse.data.token}`;
-      }
+      const { token, user } = data;
 
-      alert(
-        `Welcome ${name}! Your account has been created and you're now logged in.`
-      );
+      // Save token in localStorage
+      localStorage.setItem("authToken", token);
 
-      // Correct navigation for frontend route
+      // Set user context
+      setUser(user);
+
+      // Set Axios defaults for future requests
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+      alert(`Welcome ${name}!`);
       navigate("/api/target-location");
-    } catch (e) {
-      console.error("Google register error:", e);
-      alert(e.response?.data?.message || "Google registration failed");
+    } catch (error) {
+      console.error("Google registration error:", error);
+      alert(
+        error.response?.data?.message ||
+          "Google registration failed. Please try again."
+      );
     }
   };
 
   useEffect(() => {
     /* global google */
     google.accounts.id.initialize({
-      client_id: "REACT_APP_GOOGLE_CLIENT_ID",
+      client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
       callback: handleGoogleRegisterSuccess,
     });
     google.accounts.id.renderButton(document.getElementById("google-signin"), {
@@ -92,7 +100,7 @@ export default function Register() {
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (token) {
-      navigate("/api/target-location"); // Navigate to frontend route
+      navigate("/api/target-location");
     }
   }, [navigate]);
 
@@ -105,7 +113,6 @@ export default function Register() {
           </div>
 
           <h2 className="text-2xl font-semibold mb-8">Create an account</h2>
-
           <form
             onSubmit={handleRegisterSubmit}
             className="w-full flex flex-col gap-3"
@@ -115,7 +122,7 @@ export default function Register() {
               placeholder="Full Name"
               value={name}
               onChange={(ev) => setName(ev.target.value)}
-              className="w-full py-3 px-4 bg-black border-1 border-white text-white rounded"
+              className="w-full py-3 px-4 bg-black border border-white text-white rounded"
               required
             />
             <input
@@ -123,7 +130,7 @@ export default function Register() {
               placeholder="Email"
               value={email}
               onChange={(ev) => setEmail(ev.target.value)}
-              className="w-full py-3 px-4 bg-black border-1 border-white text-white rounded"
+              className="w-full py-3 px-4 bg-black border border-white text-white rounded"
               required
             />
             <input
@@ -131,29 +138,29 @@ export default function Register() {
               placeholder="Password"
               value={password}
               onChange={(ev) => setPassword(ev.target.value)}
-              className="w-full py-3 px-4 bg-black border-1 border-white text-white rounded"
+              className="w-full py-3 px-4 bg-black border border-white text-white rounded"
               required
             />
 
             <button
               type="submit"
-              className="w-full mt-3 py-3 bg-gray-900 text-white font-semibold rounded"
+              className="w-full mt-3 py-3 bg-gray-900 text-white font-semibold rounded hover:bg-gray-800 transition-colors"
             >
               Sign Up
             </button>
 
             <div className="my-2 w-full border-t border-gray-700"></div>
 
-            <div id="google-signin" className="w-full py-3 bg-white"></div>
+            <div id="google-signin" className="w-full"></div>
           </form>
 
           <p className="text-gray-500 text-sm mt-6">
             By signing up, you agree to our{" "}
-            <Link to="/terms" className="underline">
+            <Link to="/terms" className="underline hover:text-gray-400">
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link to="/privacy" className="underline">
+            <Link to="/privacy" className="underline hover:text-gray-400">
               Data Processing Agreement
             </Link>
             .
@@ -162,9 +169,9 @@ export default function Register() {
           <div className="mt-6 w-full border-t border-gray-700"></div>
 
           <p className="mt-4 text-gray-400 text-base font-bold">
-            Already have an account? &nbsp;
+            Already have an account?{" "}
             <Link to="/login" className="text-indigo-500 hover:underline">
-              Login &#x2192;
+              Login →
             </Link>
           </p>
         </div>

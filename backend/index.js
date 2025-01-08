@@ -272,37 +272,38 @@ app.post("/api/register", async (req, res) => {
     }
   }
 });
+app.post("/api/register-google", handleRegister);
 
-app.post("/api/register-google", async (req, res) => {
-  const { email, name } = req.body;
+// app.post("/api/register-google", async (req, res) => {
+//   const { email, name } = req.body;
 
-  try {
-    // Use the findOrCreateUser function to either find or create the user
-    const user = await findOrCreateUser(email, name);
+//   try {
+//     // Use the findOrCreateUser function to either find or create the user
+//     const user = await findOrCreateUser(email, name);
 
-    // Generate a JWT token for the user
-    jwt.sign(
-      { email: user.email, id: user._id },
-      jwtSecret,
-      {},
-      (err, token) => {
-        if (err) throw err;
+//     // Generate a JWT token for the user
+//     jwt.sign(
+//       { email: user.email, id: user._id },
+//       jwtSecret,
+//       {},
+//       (err, token) => {
+//         if (err) throw err;
 
-        // Send the JWT token as a cookie and user data as a response
-        res
-          .cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production", // secure in production
-            sameSite: "strict",
-          })
-          .json(user);
-      }
-    );
-  } catch (error) {
-    console.error("Error in /api/register-google:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+//         // Send the JWT token as a cookie and user data as a response
+//         res
+//           .cookie("token", token, {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === "production", // secure in production
+//             sameSite: "strict",
+//           })
+//           .json(user);
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Error in /api/register-google:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
 // app.post("/api/login", async (req, res) => {
 //   const { email, password } = req.body;
@@ -345,6 +346,8 @@ app.post("/api/register-google", async (req, res) => {
 //     res.status(500).json({ error: "Internal Server Error" });
 //   }
 // });
+
+app.post("/api/login-google", handleGoogleAuth);
 
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
@@ -399,31 +402,197 @@ app.post("/api/login", async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+async function handleRegister(req, res) {
+  const {
+    name,
+    email,
+    password,
+    googleId,
+    picture,
+    authProvider = "email",
+  } = req.body;
 
-app.post("/api/login-google", async (req, res) => {
-  const { email, name } = req.body;
   try {
-    const user = await findOrCreateUser(email, name);
-    jwt.sign(
-      { email: user.email, id: user._id },
-      jwtSecret,
-      {},
-      (err, token) => {
-        if (err) throw err;
-        res
-          .cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-          })
-          .json(user);
+    // Check if the user already exists
+    let user = await User.findOne({ email });
+
+    if (authProvider === "google") {
+      // Handle Google Sign-In
+      if (!user) {
+        // If user does not exist, create a new Google-based user
+        user = await User.create({
+          name,
+          email,
+          googleId,
+          picture,
+          authProvider: "google",
+          emailVerified: true, // Assume email is verified for Google sign-ins
+        });
+      } else {
+        // Update Google-specific fields for existing user
+        user.googleId = googleId || user.googleId;
+        user.picture = picture || user.picture;
+        user.authProvider = "google"; // Mark the user as a Google user
+        await user.save();
       }
+    } else {
+      // Handle Email/Password Registration
+      if (user) {
+        return res.status(409).json({
+          message: "Email already registered",
+        });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create a new user with email/password
+      user = await User.create({
+        name,
+        email,
+        password: hashedPassword,
+        authProvider: "email",
+        emailVerified: false,
+      });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
     );
+
+    // Return user data and token
+    res.status(201).json({
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture, // Include profile picture for Google users
+      },
+    });
   } catch (error) {
-    console.error("Error in /login-google:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Registration/Login error:", error);
+    res.status(500).json({
+      message: "Registration/Login failed",
+      error: error.message,
+    });
   }
-});
+}
+
+async function handleGoogleAuth(req, res) {
+  const { email, name, googleId, picture } = req.body;
+
+  try {
+    const user = await findOrCreateUser({
+      email,
+      name,
+      googleId,
+      picture,
+      authProvider: "google",
+    });
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+      },
+    });
+  } catch (error) {
+    console.error("Google auth error:", error);
+    res.status(500).json({
+      message: "Authentication failed",
+      error: error.message,
+    });
+  }
+}
+
+// 2. Your existing findOrCreateUser function
+async function findOrCreateUser({
+  email,
+  name,
+  googleId,
+  picture,
+  authProvider,
+}) {
+  try {
+    let user = await User.findOne({
+      $or: [{ email: email }, { googleId: googleId }],
+    });
+
+    if (!user) {
+      user = await User.create({
+        email,
+        name,
+        googleId,
+        picture,
+        authProvider,
+        emailVerified: true,
+      });
+    } else {
+      if (googleId && !user.googleId) {
+        user.googleId = googleId;
+      }
+      if (picture && !user.picture) {
+        user.picture = picture;
+      }
+      if (name && !user.name) {
+        user.name = name;
+      }
+      await user.save();
+    }
+
+    return user;
+  } catch (error) {
+    console.error("Error in findOrCreateUser:", error);
+    throw new Error("Failed to process user account");
+  }
+}
+
+// app.post("/api/login-google", async (req, res) => {
+
+//   const { email, name } = req.body;
+//   try {
+//     const user = await findOrCreateUser(email, name);
+//     jwt.sign(
+//       { email: user.email, id: user._id },
+//       jwtSecret,
+//       {},
+//       (err, token) => {
+//         if (err) throw err;
+//         res
+//           .cookie("token", token, {
+//             httpOnly: true,
+//             secure: process.env.NODE_ENV === "production",
+//             sameSite: "strict",
+//           })
+//           .json(user);
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Error in /login-google:", error);
+//     res.status(500).json({ error: "Internal Server Error" });
+//   }
+// });
 
 app.get("/api/profile", (req, res) => {
   const { token } = req.cookies;
